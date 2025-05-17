@@ -27,10 +27,19 @@ const vibes = [
 function App() {
   const [result, setResult] = useState(null);
   const [showSplash, setShowSplash] = useState(true);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     sdk.actions.ready();
     const timeout = setTimeout(() => setShowSplash(false), 1500); // 1.5 seconds
+
+    // Fetch Farcaster user context
+    sdk.context.then(ctx => {
+      if (ctx && ctx.user) {
+        setUser(ctx.user);
+      }
+    });
+
     return () => clearTimeout(timeout);
   }, []);
 
@@ -82,12 +91,33 @@ const handleShare = async () => {
       <div style={{
         backgroundColor: '#BFC8E0',
         padding: '12px',
-        textAlign: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         fontWeight: 'bold',
         fontSize: '1.1rem',
         color: 'white'
       }}>
-        Hello!
+        <span>Hello!</span>
+        {user && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1rem', fontWeight: 'normal' }}>
+              {user.displayName || user.username}
+            </span>
+            <img
+              src={user.pfpUrl}
+              alt={user.username}
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                objectFit: 'cover',
+                border: '2px solid #fff',
+                background: '#eee'
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Main */}
@@ -107,7 +137,7 @@ const handleShare = async () => {
               fontWeight: 'bold',
               marginBottom: '20px'
             }}>
-              Show me today’s energy
+              Show me today's energy
             </h1>
             <button
               onClick={handleClick}
