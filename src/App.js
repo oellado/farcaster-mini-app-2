@@ -80,7 +80,7 @@ function App() {
 
   // --- Improved user search logic (with debug logging and error handling) ---
   useEffect(() => {
-    if (!screen === 'gifting' || !giftUsername.trim()) {
+    if (screen !== 'gifting' || !giftUsername.trim()) {
       setUserSuggestions([]);
       setSearchError("");
       return;
@@ -91,9 +91,11 @@ function App() {
     const searchTerm = giftUsername.trim();
     // Helper to set suggestions and stop searching
     const finish = (users) => {
-      setUserSuggestions(users);
-      setIsSearching(false);
-      if (users.length === 0) setSearchError("No users found.");
+      if (!ignore) {
+        setUserSuggestions(users);
+        setIsSearching(false);
+        if (users.length === 0) setSearchError("No users found.");
+      }
     };
     // Run both search and by_username in parallel, merge results
     Promise.all([
@@ -103,20 +105,17 @@ function App() {
           'x-api-key': '30558204-7AF3-44A6-9756-D14BBB60F5D2',
           'x-neynar-experimental': 'false'
         }
-      }).then(res => {console.log('Neynar search', res); return res.json();}).then(data => (data.result && data.result.users) ? data.result.users : []),
+      }).then(res => res.json()).then(data => (data.result && data.result.users) ? data.result.users : []),
       fetchUserByUsername(searchTerm)
     ]).then(([searchUsers, byUsernameUser]) => {
-      if (!ignore) {
-        let users = searchUsers || [];
-        if (byUsernameUser) {
-          // Only add if not already in list
-          if (!users.some(u => u.username === byUsernameUser.username)) {
-            users = [byUsernameUser, ...users];
-          }
+      let users = searchUsers || [];
+      if (byUsernameUser) {
+        // Only add if not already in list
+        if (!users.some(u => u.username === byUsernameUser.username)) {
+          users = [byUsernameUser, ...users];
         }
-        console.log('User suggestions:', users);
-        finish(users);
       }
+      finish(users);
     }).catch((err) => { if (!ignore) { setSearchError("Search failed"); setIsSearching(false); console.error('Search error', err); } });
     return () => { ignore = true; };
   }, [giftUsername, screen]);
@@ -485,8 +484,8 @@ function App() {
           >
             Mint More
           </button>
-          <div style={{ color: '#6C9BCF', fontSize: '1rem', marginBottom: 24, marginTop: 2, fontWeight: 500 }}>
-            Try gifting an NFT by selecting one above.
+          <div style={{ color: '#6C9BCF', fontSize: '1rem', marginBottom: 32, marginTop: 12, fontWeight: 'bold' }}>
+            Pssst, try gifting an NFT by selecting one above.
           </div>
           {/* Lightbox overlay */}
           {lightbox.open && (
@@ -719,7 +718,7 @@ function App() {
               You are sending {selectedUsers.length} NFT{selectedUsers.length > 1 ? 's' : ''}.
               {/* Edition warning: not enough editions for selected users */}
               {selectedUsers.length > 0 && giftingIdx !== null && giftingIdx !== undefined && mintCounts[giftingIdx] > 0 && selectedUsers.length > mintCounts[giftingIdx] && (
-                <div style={{ color: '#FFD700', fontSize: '0.98rem', marginTop: 2, fontWeight: 500 }}>
+                <div style={{ color: '#fff', fontSize: '0.98rem', marginTop: 2, fontWeight: 'bold' }}>
                   You only have {mintCounts[giftingIdx]} edition{mintCounts[giftingIdx] > 1 ? 's' : ''} of this NFT. Sending to {selectedUsers.length} user{selectedUsers.length > 1 ? 's' : ''} may fail.
                 </div>
               )}
@@ -763,7 +762,6 @@ function App() {
         position: 'relative',
         zIndex: 4000
       }}>
-        {TopBar}
         <div style={{ background: '#fff', borderRadius: 18, padding: '40px 32px', minWidth: 280, textAlign: 'center', boxShadow: '0 4px 32px #0002', marginTop: 60 }}>
           <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#6C9BCF', marginBottom: 12 }}>Transaction Successful!</div>
           <div style={{ fontSize: '1.05rem', color: '#333', marginBottom: 10 }}>Fake Tx Hash:</div>
