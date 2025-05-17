@@ -194,7 +194,11 @@ function App() {
     }
     let ignore = false;
     setIsSearching(true);
-    fetch(`https://api.neynar.com/v2/farcaster/user/search?q=${encodeURIComponent(giftUsername.trim())}&limit=5`, {
+    const searchTerm = giftUsername.trim();
+    // Helper to set suggestions and stop searching
+    const finish = (users) => { setUserSuggestions(users); setIsSearching(false); };
+    // Try /user/search first
+    fetch(`https://api.neynar.com/v2/farcaster/user/search?q=${encodeURIComponent(searchTerm)}&limit=5`, {
       headers: {
         'accept': 'application/json',
         'x-api-key': '30558204-7AF3-44A6-9756-D14BBB60F5D2',
@@ -206,21 +210,38 @@ function App() {
         if (!ignore) {
           let users = (data.result && data.result.users) ? data.result.users : [];
           // If no users found, try exact match with by_username
-          if (users.length === 0 && giftUsername.trim().length > 0) {
-            const exact = await fetchUserByUsername(giftUsername.trim());
+          if (users.length === 0 && searchTerm.length > 0) {
+            const exact = await fetchUserByUsername(searchTerm);
             if (exact) {
-              setUserSuggestions([exact]);
+              finish([exact]);
             } else {
-              setUserSuggestions([]);
+              // If input contains space or dot, try searching by display name
+              if (searchTerm.includes(' ') || searchTerm.includes('.')) {
+                fetch(`https://api.neynar.com/v2/farcaster/user/search?q=${encodeURIComponent(searchTerm)}&limit=5`, {
+                  headers: {
+                    'accept': 'application/json',
+                    'x-api-key': '30558204-7AF3-44A6-9756-D14BBB60F5D2',
+                    'x-neynar-experimental': 'false'
+                  }
+                })
+                  .then(res2 => res2.json())
+                  .then(data2 => {
+                    if (!ignore) {
+                      let users2 = (data2.result && data2.result.users) ? data2.result.users : [];
+                      finish(users2);
+                    }
+                  })
+                  .catch(() => { if (!ignore) finish([]); });
+              } else {
+                finish([]);
+              }
             }
-            setIsSearching(false);
           } else {
-            setUserSuggestions(users);
-            setIsSearching(false);
+            finish(users);
           }
         }
       })
-      .catch((err) => { if (!ignore) setIsSearching(false); });
+      .catch(() => { if (!ignore) finish([]); });
     return () => { ignore = true; };
   }, [giftUsername, showGiftModal]);
 
@@ -509,7 +530,7 @@ function App() {
                     bottom: 0,
                     width: '100vw',
                     minHeight: 260,
-                    background: 'rgba(191,200,224,0.98)',
+                    background: 'rgba(44, 62, 110, 0.98)',
                     boxShadow: '0 -2px 24px #0002',
                     zIndex: 2100,
                     display: 'flex',
@@ -580,9 +601,9 @@ function App() {
                   )}
                   {/* Most Interacted Users */}
                   <div style={{ marginTop: 10, marginBottom: 16, width: 220 }}>
-                    <div style={{ color: '#A8B0CD', fontSize: '0.95rem', marginBottom: 4, textAlign: 'center' }}>Most Interacted</div>
-                    <div style={{ display: 'flex', gap: 10, flexWrap: 'nowrap', justifyContent: 'center', maxWidth: 220 }}>
-                      {mostInteracted.slice(0, 5).map(u => (
+                    <div style={{ color: '#fff', fontSize: '0.95rem', marginBottom: 4, textAlign: 'center', fontWeight: 'bold', letterSpacing: '0.01em' }}>Most Interacted</div>
+                    <div style={{ display: 'flex', gap: 18, flexWrap: 'nowrap', justifyContent: 'center', maxWidth: 220 }}>
+                      {mostInteracted.slice(0, 3).map(u => (
                         <div
                           key={u.username}
                           onClick={() => addSelectedUser({ username: u.username, pfp_url: u.pfp_url })}
@@ -609,6 +630,18 @@ function App() {
                           <button onClick={() => removeSelectedUser(u.username)} style={{ position: 'absolute', bottom: -8, right: -8, background: '#fff', border: '1px solid #A8B0CD', borderRadius: '50%', width: 16, height: 16, color: '#A8B0CD', fontSize: 11, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
                         </div>
                       ))}
+                    </div>
+                  )}
+                  {/* Info about how many NFTs will be sent and edition warning */}
+                  {selectedUsers.length > 0 && (
+                    <div style={{ color: '#fff', fontSize: '1.05rem', textAlign: 'center', marginBottom: 8, fontWeight: 500 }}>
+                      You are sending {selectedUsers.length} NFT{selectedUsers.length > 1 ? 's' : ''}.
+                      {/* Edition warning: only 1 edition and multiple users */}
+                      {selectedUsers.length > 1 && giftingIdx !== null && giftingIdx !== undefined && mintCounts[giftingIdx] === 1 && (
+                        <div style={{ color: '#FFD700', fontSize: '0.98rem', marginTop: 2, fontWeight: 500 }}>
+                          You only have 1 edition of this NFT. Sending to multiple users may fail.
+                        </div>
+                      )}
                     </div>
                   )}
                   <button
