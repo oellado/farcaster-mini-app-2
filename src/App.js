@@ -31,6 +31,7 @@ function App() {
   // Track minted NFTs by index (mocked)
   const [minted, setMinted] = useState([]);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [lightbox, setLightbox] = useState({ open: false, idx: 0 });
 
   useEffect(() => {
     sdk.actions.ready();
@@ -77,6 +78,12 @@ function App() {
     }, 1200);
   };
 
+  // Lightbox navigation helpers
+  const mintedSorted = minted.slice().sort((a, b) => a - b);
+  const currentMintedIdx = mintedSorted.indexOf(lightbox.idx);
+  const prevMinted = mintedSorted[currentMintedIdx - 1];
+  const nextMinted = mintedSorted[currentMintedIdx + 1];
+
   // Profile/mints page
   if (showProfile) {
     return (
@@ -85,7 +92,8 @@ function App() {
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        fontFamily: 'sans-serif'
+        fontFamily: 'sans-serif',
+        position: 'relative'
       }}>
         {/* Header with back button and pfp */}
         <div style={{
@@ -134,8 +142,10 @@ function App() {
                 position: 'absolute',
                 right: 16,
                 top: '50%',
-                transform: 'translateY(-50%)'
+                transform: 'translateY(-50%)',
+                cursor: 'pointer'
               }}
+              onClick={() => setShowProfile(false)}
             />
           )}
         </div>
@@ -147,7 +157,8 @@ function App() {
           alignItems: 'center',
           justifyContent: 'flex-start',
           textAlign: 'center',
-          padding: '32px 20px 0 20px'
+          padding: '32px 20px 0 20px',
+          position: 'relative'
         }}>
           <h2 style={{ marginBottom: '24px', fontWeight: 'bold' }}>Your Mints</h2>
           <div style={{
@@ -168,8 +179,11 @@ function App() {
                 justifyContent: 'center',
                 overflow: 'hidden',
                 border: minted.includes(idx) ? '2px solid #6C9BCF' : '2px solid #ccc',
-                position: 'relative'
-              }}>
+                position: 'relative',
+                cursor: minted.includes(idx) ? 'pointer' : 'default'
+              }}
+                onClick={() => minted.includes(idx) && setLightbox({ open: true, idx })}
+              >
                 {minted.includes(idx) ? (
                   <img
                     src={vibe.gif}
@@ -185,6 +199,65 @@ function App() {
           <div style={{ color: '#888', fontSize: '1rem' }}>
             {minted.length === 0 ? 'You have not minted any vibes yet.' : `You have minted ${minted.length} vibe${minted.length > 1 ? 's' : ''}!`}
           </div>
+
+          {/* Lightbox overlay */}
+          {lightbox.open && (
+            <div
+              onClick={e => {
+                if (e.target === e.currentTarget) setLightbox({ open: false, idx: 0 });
+              }}
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100vw',
+                height: '100vh',
+                background: 'rgba(0,0,0,0.45)',
+                zIndex: 2000,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column',
+              }}
+            >
+              {/* Main GIF in lightbox */}
+              <div style={{ position: 'relative', background: '#fff', borderRadius: 24, padding: 16, boxShadow: '0 4px 32px #0002', minWidth: 240, minHeight: 240, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {/* Left arrow */}
+                {minted.length > 1 && prevMinted !== undefined && (
+                  <button
+                    onClick={e => { e.stopPropagation(); setLightbox({ open: true, idx: prevMinted }); }}
+                    style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', background: '#EAEAE8', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    aria-label="Previous"
+                  >
+                    ‹
+                  </button>
+                )}
+                <img
+                  src={vibes[lightbox.idx].gif}
+                  alt={`Minted vibe ${lightbox.idx}`}
+                  style={{ width: 200, height: 200, objectFit: 'contain', borderRadius: 16 }}
+                />
+                {/* Right arrow */}
+                {minted.length > 1 && nextMinted !== undefined && (
+                  <button
+                    onClick={e => { e.stopPropagation(); setLightbox({ open: true, idx: nextMinted }); }}
+                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: '#EAEAE8', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    aria-label="Next"
+                  >
+                    ›
+                  </button>
+                )}
+                {/* Home button (top right) */}
+                <button
+                  onClick={() => { setShowProfile(false); setLightbox({ open: false, idx: 0 }); }}
+                  style={{ position: 'absolute', top: 8, right: 8, background: '#BFC8E0', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px #0001' }}
+                  aria-label="Home"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" fill="white"/></svg>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -213,29 +286,39 @@ function App() {
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-          {/* Simple sparkles/confetti using CSS */}
-          {[...Array(18)].map((_, i) => (
-            <div
-              key={i}
-              style={{
-                position: 'absolute',
-                left: `${10 + Math.random() * 80}%`,
-                top: `${10 + Math.random() * 80}%`,
-                width: 12,
-                height: 12,
-                borderRadius: '50%',
-                background: `hsl(${Math.random() * 360}, 80%, 70%)`,
-                opacity: 0.8,
-                animation: 'pop 1s ease',
-                animationDelay: `${Math.random() * 0.5}s`,
-              }}
-            />
-          ))}
+          {/* SVG stars/sparks animation */}
+          {[...Array(14)].map((_, i) => {
+            const size = 24 + Math.random() * 24;
+            const left = 10 + Math.random() * 80;
+            const top = 10 + Math.random() * 80;
+            const rotate = Math.random() * 360;
+            const delay = Math.random() * 0.5;
+            return (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  left: `${left}%`,
+                  top: `${top}%`,
+                  width: size,
+                  height: size,
+                  opacity: 0.85,
+                  transform: `rotate(${rotate}deg)`,
+                  animation: 'starpop 1.1s ease',
+                  animationDelay: `${delay}s`,
+                }}
+              >
+                <svg width="100%" height="100%" viewBox="0 0 139 181" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M65.5537 3.84493C66.2922 -0.617589 72.7078 -0.617573 73.4463 3.84494L83.9037 67.0319C84.1453 68.4913 85.1725 69.6983 86.5745 70.17L135.732 86.7088C139.364 87.931 139.364 93.069 135.732 94.2912L86.5745 110.83C85.1725 111.302 84.1453 112.509 83.9037 113.968L73.4463 177.155C72.7078 181.618 66.2922 181.618 65.5537 177.155L55.0963 113.968C54.8548 112.509 53.8275 111.302 52.4255 110.83L3.26826 94.2912C-0.364367 93.069 -0.364364 87.931 3.26826 86.7088L52.4255 70.17C53.8275 69.6983 54.8548 68.4913 55.0963 67.0319L65.5537 3.84493Z" fill="white"/>
+                </svg>
+              </div>
+            );
+          })}
           <style>{`
-            @keyframes pop {
-              0% { transform: scale(0.2); opacity: 0.7; }
-              60% { transform: scale(1.2); opacity: 1; }
-              100% { transform: scale(0.7); opacity: 0; }
+            @keyframes starpop {
+              0% { transform: scale(0.2) rotate(0deg); opacity: 0.7; }
+              60% { transform: scale(1.2) rotate(20deg); opacity: 1; }
+              100% { transform: scale(0.7) rotate(0deg); opacity: 0; }
             }
           `}</style>
         </div>
