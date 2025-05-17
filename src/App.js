@@ -168,6 +168,24 @@ function App() {
     setSelectedUsers(selectedUsers.filter(u => u.username !== username));
   };
 
+  // Helper: fetch user by username (exact match)
+  const fetchUserByUsername = async (username) => {
+    try {
+      const res = await fetch(`https://api.neynar.com/v2/farcaster/user/by_username?username=${encodeURIComponent(username)}`, {
+        headers: {
+          'accept': 'application/json',
+          'x-api-key': '30558204-7AF3-44A6-9756-D14BBB60F5D2',
+          'x-neynar-experimental': 'false'
+        }
+      });
+      const data = await res.json();
+      if (data.user && data.user.username) {
+        return { username: data.user.username, pfp_url: data.user.pfp_url };
+      }
+    } catch (e) {}
+    return null;
+  };
+
   // Search Farcaster usernames as you type (Neynar public API)
   useEffect(() => {
     if (!showGiftModal || !giftUsername.trim()) {
@@ -184,30 +202,18 @@ function App() {
       }
     })
       .then(res => res.json())
-      .then(data => {
+      .then(async data => {
         if (!ignore) {
           let users = (data.result && data.result.users) ? data.result.users : [];
           // If no users found, try exact match with by_username
           if (users.length === 0 && giftUsername.trim().length > 0) {
-            fetch(`https://api.neynar.com/v2/farcaster/user/by_username?username=${encodeURIComponent(giftUsername.trim())}`, {
-              headers: {
-                'accept': 'application/json',
-                'x-api-key': '30558204-7AF3-44A6-9756-D14BBB60F5D2',
-                'x-neynar-experimental': 'false'
-              }
-            })
-              .then(res2 => res2.json())
-              .then(data2 => {
-                if (!ignore) {
-                  if (data2.user && data2.user.username) {
-                    setUserSuggestions([data2.user]);
-                  } else {
-                    setUserSuggestions([]);
-                  }
-                  setIsSearching(false);
-                }
-              })
-              .catch(() => { if (!ignore) setIsSearching(false); });
+            const exact = await fetchUserByUsername(giftUsername.trim());
+            if (exact) {
+              setUserSuggestions([exact]);
+            } else {
+              setUserSuggestions([]);
+            }
+            setIsSearching(false);
           } else {
             setUserSuggestions(users);
             setIsSearching(false);
@@ -217,6 +223,18 @@ function App() {
       .catch((err) => { if (!ignore) setIsSearching(false); });
     return () => { ignore = true; };
   }, [giftUsername, showGiftModal]);
+
+  // Allow pressing Enter to select a user by exact username
+  const handleGiftInputKeyDown = async (e) => {
+    if (e.key === 'Enter' && giftUsername.trim()) {
+      const user = await fetchUserByUsername(giftUsername.trim());
+      if (user) {
+        addSelectedUser(user);
+      } else {
+        setUserSuggestions([]);
+      }
+    }
+  };
 
   // Top bar with HOME button and pfp (always present)
   const TopBar = (
@@ -507,6 +525,7 @@ function App() {
                     placeholder="Farcaster username"
                     value={giftUsername}
                     onChange={e => setGiftUsername(e.target.value)}
+                    onKeyDown={handleGiftInputKeyDown}
                     style={{
                       fontSize: '1.1rem',
                       padding: '8px 16px',
