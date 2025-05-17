@@ -48,6 +48,57 @@ function App() {
     { username: 'carol', pfp_url: 'https://i.imgur.com/6A7IjQk.jpg' }
   ]);
 
+  // --- Mock transaction state for gifting ---
+  const [showTxModal, setShowTxModal] = useState(false);
+  const [txHash, setTxHash] = useState("");
+  const [pendingShare, setPendingShare] = useState(false);
+  const [txSelectedUsers, setTxSelectedUsers] = useState([]); // store users for tx modal
+
+  // Gift logic (mock with tx)
+  const handleGiftSend = () => {
+    if (selectedUsers.length === 0) return;
+    // Show fake tx modal
+    setShowGiftModal(false);
+    setShowTxModal(true);
+    setTxHash('0x' + Math.random().toString(16).slice(2, 10) + Math.random().toString(16).slice(2, 10));
+    setTxSelectedUsers(selectedUsers); // store for modal/share
+    // Do NOT clear selectedUsers, giftUsername, or lightbox here
+  };
+
+  // Share after gifting
+  const handleGiftShare = async () => {
+    if (!txHash) return;
+    setPendingShare(true);
+    try {
+      const usernames = txSelectedUsers.map(u => '@' + u.username).join(' ');
+      await sdk.actions.composeCast({
+        text: `${usernames} i just sent you a gif via Daily Vibe mini-app, check it here`,
+        embeds: [
+          'https://warpcast.com/miniapps/F3EoBj27HyTd/daily-vibes'
+        ]
+      });
+    } catch (e) {}
+    setPendingShare(false);
+    setShowTxModal(false);
+    setTxHash("");
+    setTxSelectedUsers([]);
+    setSelectedUsers([]);
+    setGiftUsername("");
+    setGiftingIdx(null);
+    setLightbox({ open: false, idx: 0 });
+  };
+
+  // Close tx modal handler
+  const handleTxModalClose = () => {
+    setShowTxModal(false);
+    setTxHash("");
+    setTxSelectedUsers([]);
+    setSelectedUsers([]);
+    setGiftUsername("");
+    setGiftingIdx(null);
+    setLightbox({ open: false, idx: 0 });
+  };
+
   // --- Improved user search logic ---
   useEffect(() => {
     if (!showGiftModal || !giftUsername.trim()) {
@@ -61,7 +112,7 @@ function App() {
     const finish = (users) => { setUserSuggestions(users); setIsSearching(false); };
     // Run both search and by_username in parallel, merge results
     Promise.all([
-      fetch(`https://api.neynar.com/v2/farcaster/user/search?q=${encodeURIComponent(searchTerm)}&limit=5`, {
+      fetch(`https://api.neynar.com/v2/farcaster/user/search?q=${encodeURIComponent(searchTerm)}&limit=15`, {
         headers: {
           'accept': 'application/json',
           'x-api-key': '30558204-7AF3-44A6-9756-D14BBB60F5D2',
@@ -83,45 +134,6 @@ function App() {
     }).catch(() => { if (!ignore) finish([]); });
     return () => { ignore = true; };
   }, [giftUsername, showGiftModal]);
-
-  // --- Mock transaction state for gifting ---
-  const [showTxModal, setShowTxModal] = useState(false);
-  const [txHash, setTxHash] = useState("");
-  const [pendingShare, setPendingShare] = useState(false);
-
-  // Gift logic (mock with tx)
-  const handleGiftSend = () => {
-    if (selectedUsers.length === 0) return;
-    // Show fake tx modal
-    setShowGiftModal(false);
-    setShowTxModal(true);
-    setTxHash('0x' + Math.random().toString(16).slice(2, 10) + Math.random().toString(16).slice(2, 10));
-    setTimeout(() => {
-      // After 1.5s, show success (already shown)
-    }, 1500);
-    setGiftUsername("");
-    setGiftingIdx(null);
-    setSelectedUsers([]);
-    setLightbox({ open: false, idx: 0 });
-  };
-
-  // Share after gifting
-  const handleGiftShare = async () => {
-    if (!txHash) return;
-    setPendingShare(true);
-    try {
-      const usernames = selectedUsers.map(u => '@' + u.username).join(' ');
-      await sdk.actions.composeCast({
-        text: `${usernames} i just sent you a gif via Daily Vibe mini-app, check it here`,
-        embeds: [
-          'https://warpcast.com/miniapps/F3EoBj27HyTd/daily-vibes'
-        ]
-      });
-    } catch (e) {}
-    setPendingShare(false);
-    setShowTxModal(false);
-    setTxHash("");
-  };
 
   useEffect(() => {
     sdk.actions.ready();
@@ -223,7 +235,7 @@ function App() {
     if (!selectedUsers.some(u => u.username === user.username)) {
       setSelectedUsers([...selectedUsers, user]);
     }
-    setGiftUsername("");
+    // Do NOT clear input or suggestions here
     setUserSuggestions([]);
     setIsSearching(false);
   };
@@ -564,6 +576,9 @@ function App() {
                       color: '#fff',
                     }}
                   />
+                  {giftUsername && (
+                    <button onClick={() => setGiftUsername("")} style={{ position: 'absolute', right: 30, top: 56, background: 'none', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer' }}>×</button>
+                  )}
                   {/* Username suggestions dropdown */}
                   {isSearching && <div style={{ color: '#A8B0CD', fontSize: '0.95rem', marginBottom: 6 }}>Searching...</div>}
                   {userSuggestions.length > 0 && (
@@ -926,7 +941,7 @@ function App() {
             </button>
             <div style={{ color: '#6C9BCF', fontSize: '0.98rem', marginTop: 2 }}>cast to let them know</div>
             <button
-              onClick={() => { setShowTxModal(false); setTxHash(""); }}
+              onClick={handleTxModalClose}
               style={{
                 fontSize: '1rem',
                 backgroundColor: '#fff',
