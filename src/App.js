@@ -83,6 +83,7 @@ function App() {
     setTimeout(() => {
       setShowConfetti(false);
       setShowProfile(false); // Go to home after celebration
+      setResult(null);
     }, 1200);
   };
 
@@ -334,7 +335,7 @@ function App() {
           justifyContent: 'center',
         }}>
           {/* SVG stars/sparks animation */}
-          {[...Array(4)].map((_, i) => {
+          {[...Array(7)].map((_, i) => {
             const size = 24 + Math.random() * 24;
             const left = 10 + Math.random() * 80;
             const top = 10 + Math.random() * 80;
