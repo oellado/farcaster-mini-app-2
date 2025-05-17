@@ -36,6 +36,7 @@ function App() {
   const [showGiftModal, setShowGiftModal] = useState(false);
   const [giftUsername, setGiftUsername] = useState("");
   const [giftingIdx, setGiftingIdx] = useState(null);
+  const [selectedUsers, setSelectedUsers] = useState([]); // {username, pfp_url}
   const [userSuggestions, setUserSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [mostInteracted, setMostInteracted] = useState([
@@ -144,12 +145,27 @@ function App() {
 
   // Gift logic (mock)
   const handleGiftSend = () => {
-    if (!giftUsername.trim()) return;
-    alert(`NFT sent to ${giftUsername.trim()} (mock tx)`);
+    if (selectedUsers.length === 0) return;
+    alert(`NFT sent to: ${selectedUsers.map(u => u.username).join(", ")} (mock tx)`);
     setShowGiftModal(false);
     setGiftUsername("");
     setGiftingIdx(null);
+    setSelectedUsers([]);
     setLightbox({ open: false, idx: 0 });
+  };
+
+  // Add user to selected list (if not already there)
+  const addSelectedUser = (user) => {
+    if (!selectedUsers.some(u => u.username === user.username)) {
+      setSelectedUsers([...selectedUsers, user]);
+    }
+    setGiftUsername("");
+    setUserSuggestions([]);
+    setIsSearching(false);
+  };
+  // Remove user from selected list
+  const removeSelectedUser = (username) => {
+    setSelectedUsers(selectedUsers.filter(u => u.username !== username));
   };
 
   // Search Farcaster usernames as you type (Neynar public API)
@@ -467,144 +483,135 @@ function App() {
               )}
               {/* Gift modal (bottom sheet) */}
               {showGiftModal && (
-                <>
-                  {/* Keep the lightbox GIF visible above the modal */}
-                  <div style={{
+                <div
+                  onClick={e => { if (e.target === e.currentTarget) setShowGiftModal(false); }}
+                  style={{
                     position: 'fixed',
                     left: 0,
-                    right: 0,
-                    bottom: 180,
-                    zIndex: 2101,
+                    bottom: 0,
+                    width: '100vw',
+                    minHeight: 260,
+                    background: 'rgba(191,200,224,0.98)',
+                    boxShadow: '0 -2px 24px #0002',
+                    zIndex: 2100,
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    pointerEvents: 'none',
-                  }}>
-                    <img
-                      src={vibes[lightbox.idx].gif}
-                      alt={`Minted vibe ${lightbox.idx}`}
-                      style={{ width: 120, height: 120, objectFit: 'contain', borderRadius: 16, boxShadow: '0 4px 32px #0002', background: '#fff' }}
-                    />
-                  </div>
-                  <div
-                    onClick={e => { if (e.target === e.currentTarget) setShowGiftModal(false); }}
+                    justifyContent: 'flex-start',
+                    padding: '48px 0 32px 0',
+                  }}
+                >
+                  <div style={{ marginBottom: 16, fontWeight: 'bold', color: '#fff', fontSize: '1.1rem' }}>Gift this NFT</div>
+                  <input
+                    type="text"
+                    placeholder="Farcaster username"
+                    value={giftUsername}
+                    onChange={e => setGiftUsername(e.target.value)}
                     style={{
-                      position: 'fixed',
-                      left: 0,
-                      bottom: 0,
-                      width: '100vw',
-                      minHeight: 260,
-                      background: 'rgba(191,200,224,0.98)',
-                      boxShadow: '0 -2px 24px #0002',
-                      zIndex: 2100,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'flex-start',
-                      padding: '48px 0 32px 0',
+                      fontSize: '1.1rem',
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      border: '1px solid #fff',
+                      marginBottom: 12,
+                      outline: 'none',
+                      width: 220,
+                      background: '#BFC8E0',
+                      color: '#fff',
                     }}
-                  >
-                    <div style={{ marginBottom: 16, fontWeight: 'bold', color: '#fff', fontSize: '1.1rem' }}>Gift this NFT</div>
-                    <input
-                      type="text"
-                      placeholder="Farcaster username"
-                      value={giftUsername}
-                      onChange={e => setGiftUsername(e.target.value)}
-                      style={{
-                        fontSize: '1.1rem',
-                        padding: '8px 16px',
-                        borderRadius: '8px',
-                        border: '1px solid #fff',
-                        marginBottom: 12,
-                        outline: 'none',
-                        width: 220,
-                        background: '#BFC8E0',
-                        color: '#fff',
-                      }}
-                    />
-                    {/* Username suggestions dropdown */}
-                    {isSearching && <div style={{ color: '#A8B0CD', fontSize: '0.95rem', marginBottom: 6 }}>Searching...</div>}
-                    {userSuggestions.length > 0 && (
-                      <div style={{
-                        background: '#fff',
-                        border: '1px solid #A8B0CD',
-                        borderRadius: '8px',
-                        marginBottom: 8,
-                        width: 220,
-                        maxHeight: 140,
-                        overflowY: 'auto',
-                        boxShadow: '0 2px 8px #0001',
-                        zIndex: 2200,
-                        position: 'relative',
-                      }}>
-                        {userSuggestions.map(u => (
-                          <div
-                            key={u.fid}
-                            onClick={() => {
-                              setGiftUsername(u.username);
-                              setUserSuggestions([]);
-                              setIsSearching(false);
-                            }}
-                            style={{
-                              padding: '7px 12px',
-                              cursor: 'pointer',
-                              color: '#333',
-                              fontSize: '1rem',
-                              borderBottom: '1px solid #F0F0F0',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 8,
-                              background: '#fff',
-                            }}
-                          >
-                            {u.pfp_url && <img src={u.pfp_url} alt={u.username} style={{ width: 22, height: 22, borderRadius: '50%' }} />}
-                            <span>@{u.username}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {!isSearching && giftUsername.trim() && userSuggestions.length === 0 && giftUsername !== '' && (
-                      <div style={{ color: '#A8B0CD', fontSize: '0.95rem', marginBottom: 8 }}>No users found.</div>
-                    )}
-                    {/* Most Interacted Users */}
-                    <div style={{ marginTop: 10, marginBottom: 16, width: 220 }}>
-                      <div style={{ color: '#A8B0CD', fontSize: '0.95rem', marginBottom: 4 }}>Most Interacted</div>
-                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-start', maxWidth: 220 }}>
-                        {mostInteracted.slice(0, 5).map(u => (
-                          <div
-                            key={u.username}
-                            onClick={() => { setGiftUsername(u.username); setUserSuggestions([]); setIsSearching(false); }}
-                            style={{
-                              display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', maxWidth: 40, marginBottom: 4
-                            }}
-                          >
-                            <img src={u.pfp_url} alt={u.username} style={{ width: 32, height: 32, borderRadius: '50%', marginBottom: 2, border: '2px solid #A8B0CD', objectFit: 'cover' }} />
-                            <span style={{ fontSize: '0.85rem', color: '#6C9BCF', wordBreak: 'break-all', textAlign: 'center' }}>@{u.username}</span>
-                          </div>
-                        ))}
-                      </div>
+                  />
+                  {/* Username suggestions dropdown */}
+                  {isSearching && <div style={{ color: '#A8B0CD', fontSize: '0.95rem', marginBottom: 6 }}>Searching...</div>}
+                  {userSuggestions.length > 0 && (
+                    <div style={{
+                      background: '#fff',
+                      border: '1px solid #A8B0CD',
+                      borderRadius: '8px',
+                      marginBottom: 8,
+                      width: 220,
+                      maxHeight: 140,
+                      overflowY: 'auto',
+                      boxShadow: '0 2px 8px #0001',
+                      zIndex: 2200,
+                      position: 'relative',
+                    }}>
+                      {userSuggestions.map(u => (
+                        <div
+                          key={u.fid}
+                          onClick={() => addSelectedUser({ username: u.username, pfp_url: u.pfp_url })}
+                          style={{
+                            padding: '7px 12px',
+                            cursor: 'pointer',
+                            color: '#333',
+                            fontSize: '1rem',
+                            borderBottom: '1px solid #F0F0F0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            background: '#fff',
+                          }}
+                        >
+                          {u.pfp_url && <img src={u.pfp_url} alt={u.username} style={{ width: 22, height: 22, borderRadius: '50%' }} />}
+                          <span>@{u.username}</span>
+                        </div>
+                      ))}
                     </div>
-                    <button
-                      onClick={handleGiftSend}
-                      style={{
-                        fontSize: '1.1rem',
-                        backgroundColor: '#fff',
-                        color: '#000',
-                        padding: '8px 22px',
-                        border: '2px solid #A8B0CD',
-                        borderRadius: '12px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        fontFamily: 'inherit',
-                        boxShadow: '0 2px 8px #0001',
-                        marginTop: 8
-                      }}
-                      disabled={!giftUsername.trim()}
-                    >
-                      Send
-                    </button>
+                  )}
+                  {!isSearching && giftUsername.trim() && userSuggestions.length === 0 && giftUsername !== '' && (
+                    <div style={{ color: '#A8B0CD', fontSize: '0.95rem', marginBottom: 8 }}>No users found.</div>
+                  )}
+                  {/* Most Interacted Users */}
+                  <div style={{ marginTop: 10, marginBottom: 16, width: 220 }}>
+                    <div style={{ color: '#A8B0CD', fontSize: '0.95rem', marginBottom: 4, textAlign: 'center' }}>Most Interacted</div>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'nowrap', justifyContent: 'center', maxWidth: 220 }}>
+                      {mostInteracted.slice(0, 5).map(u => (
+                        <div
+                          key={u.username}
+                          onClick={() => addSelectedUser({ username: u.username, pfp_url: u.pfp_url })}
+                          style={{
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', maxWidth: 40, marginBottom: 4
+                          }}
+                        >
+                          <img src={u.pfp_url} alt={u.username} style={{ width: 32, height: 32, borderRadius: '50%', marginBottom: 2, border: '2px solid #A8B0CD', objectFit: 'cover' }} />
+                          <span style={{ fontSize: '0.85rem', color: '#6C9BCF', wordBreak: 'break-all', textAlign: 'center' }}>@{u.username}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </>
+                  {/* Selected users pfps */}
+                  {selectedUsers.length > 0 && (
+                    <div style={{ display: 'flex', gap: 12, margin: '10px 0 18px 0', justifyContent: 'center', width: 220 }}>
+                      {selectedUsers.map(u => (
+                        <div key={u.username} style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <img src={u.pfp_url} alt={u.username} style={{ width: 36, height: 36, borderRadius: '50%', border: '2px solid #6C9BCF', objectFit: 'cover', background: '#fff' }} />
+                          <span style={{ fontSize: '0.8rem', color: '#6C9BCF', textAlign: 'center', marginTop: 2 }}>@{u.username}</span>
+                          {/* Checkmark */}
+                          <span style={{ position: 'absolute', top: -6, right: -6, background: '#fff', borderRadius: '50%', border: '2px solid #6C9BCF', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6C9BCF', fontWeight: 'bold', fontSize: 13 }}>✓</span>
+                          {/* Remove button */}
+                          <button onClick={() => removeSelectedUser(u.username)} style={{ position: 'absolute', bottom: -8, right: -8, background: '#fff', border: '1px solid #A8B0CD', borderRadius: '50%', width: 16, height: 16, color: '#A8B0CD', fontSize: 11, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    onClick={handleGiftSend}
+                    style={{
+                      fontSize: '1.1rem',
+                      backgroundColor: '#fff',
+                      color: '#000',
+                      padding: '8px 22px',
+                      border: '2px solid #A8B0CD',
+                      borderRadius: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      boxShadow: '0 2px 8px #0001',
+                      marginTop: 8
+                    }}
+                    disabled={selectedUsers.length === 0}
+                  >
+                    Send
+                  </button>
+                </div>
               )}
             </div>
           )}
