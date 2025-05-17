@@ -95,7 +95,7 @@ function App() {
         fontFamily: 'sans-serif',
         position: 'relative'
       }}>
-        {/* Header with back button and pfp */}
+        {/* Header with HOME button and pfp */}
         <div style={{
           backgroundColor: '#BFC8E0',
           padding: '12px',
@@ -107,7 +107,7 @@ function App() {
           color: 'white',
           position: 'relative'
         }}>
-          {/* Back button */}
+          {/* HOME button */}
           <button
             onClick={() => setShowProfile(false)}
             style={{
@@ -118,14 +118,19 @@ function App() {
               background: 'none',
               border: 'none',
               color: 'white',
-              fontSize: '1.5rem',
+              fontSize: '0.85rem',
               cursor: 'pointer',
               fontWeight: 'bold',
-              padding: 0
+              padding: '2px 8px',
+              borderRadius: '8px',
+              letterSpacing: '0.05em',
+              boxShadow: 'none',
+              outline: 'none',
+              minWidth: 0
             }}
-            aria-label="Back"
+            aria-label="Home"
           >
-            ←
+            HOME
           </button>
           <span style={{ flex: 1, textAlign: 'center' }}>Daily Vibes</span>
           {user && (
@@ -196,9 +201,27 @@ function App() {
               </div>
             ))}
           </div>
-          <div style={{ color: '#888', fontSize: '1rem' }}>
+          <div style={{ color: '#888', fontSize: '1rem', marginBottom: 24 }}>
             {minted.length === 0 ? 'You have not minted any vibes yet.' : `You have minted ${minted.length} vibe${minted.length > 1 ? 's' : ''}!`}
           </div>
+          <button
+            onClick={() => setShowProfile(false)}
+            style={{
+              fontSize: '1.1rem',
+              backgroundColor: '#6C9BCF',
+              color: '#fff',
+              padding: '10px 24px',
+              border: 'none',
+              borderRadius: '12px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              marginBottom: '16px',
+              marginTop: 0,
+              minWidth: '120px',
+            }}
+          >
+            Mint More
+          </button>
 
           {/* Lightbox overlay */}
           {lightbox.open && (
@@ -212,7 +235,7 @@ function App() {
                 left: 0,
                 width: '100vw',
                 height: '100vh',
-                background: 'rgba(0,0,0,0.45)',
+                background: 'rgba(0,0,0,0.0)',
                 zIndex: 2000,
                 display: 'flex',
                 alignItems: 'center',
@@ -221,40 +244,32 @@ function App() {
               }}
             >
               {/* Main GIF in lightbox */}
-              <div style={{ position: 'relative', background: '#fff', borderRadius: 24, padding: 16, boxShadow: '0 4px 32px #0002', minWidth: 240, minHeight: 240, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ position: 'relative', background: 'transparent', borderRadius: 24, padding: 0, minWidth: 240, minHeight: 240, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {/* Left arrow */}
                 {minted.length > 1 && prevMinted !== undefined && (
                   <button
                     onClick={e => { e.stopPropagation(); setLightbox({ open: true, idx: prevMinted }); }}
-                    style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', background: '#EAEAE8', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ position: 'absolute', left: -40, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#6C9BCF', fontSize: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxShadow: 'none' }}
                     aria-label="Previous"
                   >
-                    ‹
+                    &#10094;
                   </button>
                 )}
                 <img
                   src={vibes[lightbox.idx].gif}
                   alt={`Minted vibe ${lightbox.idx}`}
-                  style={{ width: 200, height: 200, objectFit: 'contain', borderRadius: 16 }}
+                  style={{ width: 200, height: 200, objectFit: 'contain', borderRadius: 16, boxShadow: '0 4px 32px #0002' }}
                 />
                 {/* Right arrow */}
                 {minted.length > 1 && nextMinted !== undefined && (
                   <button
                     onClick={e => { e.stopPropagation(); setLightbox({ open: true, idx: nextMinted }); }}
-                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: '#EAEAE8', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ position: 'absolute', right: -40, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#6C9BCF', fontSize: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxShadow: 'none' }}
                     aria-label="Next"
                   >
-                    ›
+                    &#10095;
                   </button>
                 )}
-                {/* Home button (top right) */}
-                <button
-                  onClick={() => { setShowProfile(false); setLightbox({ open: false, idx: 0 }); }}
-                  style={{ position: 'absolute', top: 8, right: 8, background: '#BFC8E0', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px #0001' }}
-                  aria-label="Home"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" fill="white"/></svg>
-                </button>
               </div>
             </div>
           )}
@@ -287,12 +302,11 @@ function App() {
           justifyContent: 'center',
         }}>
           {/* SVG stars/sparks animation */}
-          {[...Array(14)].map((_, i) => {
+          {[...Array(7)].map((_, i) => {
             const size = 24 + Math.random() * 24;
             const left = 10 + Math.random() * 80;
             const top = 10 + Math.random() * 80;
-            const rotate = Math.random() * 360;
-            const delay = Math.random() * 0.5;
+            const delay = Math.random() * 0.7;
             return (
               <div
                 key={i}
@@ -303,7 +317,6 @@ function App() {
                   width: size,
                   height: size,
                   opacity: 0.85,
-                  transform: `rotate(${rotate}deg)`,
                   animation: 'starpop 1.1s ease',
                   animationDelay: `${delay}s`,
                 }}
@@ -316,9 +329,10 @@ function App() {
           })}
           <style>{`
             @keyframes starpop {
-              0% { transform: scale(0.2) rotate(0deg); opacity: 0.7; }
-              60% { transform: scale(1.2) rotate(20deg); opacity: 1; }
-              100% { transform: scale(0.7) rotate(0deg); opacity: 0; }
+              0% { opacity: 0; }
+              20% { opacity: 1; }
+              80% { opacity: 1; }
+              100% { opacity: 0; }
             }
           `}</style>
         </div>
