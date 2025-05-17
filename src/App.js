@@ -28,8 +28,9 @@ function App() {
   const [result, setResult] = useState(null);
   const [user, setUser] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
-  // Track minted NFTs by index (mocked)
-  const [minted, setMinted] = useState([]);
+  // Track minted NFTs by index and edition count
+  const [minted, setMinted] = useState([]); // array of indices
+  const [mintCounts, setMintCounts] = useState(Array(vibes.length).fill(0)); // edition count per NFT
   const [showConfetti, setShowConfetti] = useState(false);
   const [lightbox, setLightbox] = useState({ open: false, idx: 0 });
 
@@ -63,26 +64,95 @@ function App() {
     }
   };
 
-  // Add a mock mint handler
   const handleMint = () => {
     if (!result) return;
     // Find the index of the current gif in vibes
     const idx = vibes.findIndex(v => v.gif === result.gif);
-    if (idx !== -1 && !minted.includes(idx)) {
-      setMinted([...minted, idx]);
+    if (idx !== -1) {
+      if (!minted.includes(idx)) {
+        setMinted([...minted, idx]);
+      }
+      // Increment edition count
+      setMintCounts(prev => {
+        const next = [...prev];
+        next[idx] = (next[idx] || 0) + 1;
+        return next;
+      });
     }
     setShowConfetti(true);
     setTimeout(() => {
       setShowConfetti(false);
-      setShowProfile(true);
+      setShowProfile(false); // Go to home after celebration
     }, 1200);
   };
 
-  // Lightbox navigation helpers
+  // Lightbox navigation helpers (endless loop)
   const mintedSorted = minted.slice().sort((a, b) => a - b);
   const currentMintedIdx = mintedSorted.indexOf(lightbox.idx);
-  const prevMinted = mintedSorted[currentMintedIdx - 1];
-  const nextMinted = mintedSorted[currentMintedIdx + 1];
+  const prevMinted = mintedSorted.length > 0 ? mintedSorted[(currentMintedIdx - 1 + mintedSorted.length) % mintedSorted.length] : undefined;
+  const nextMinted = mintedSorted.length > 0 ? mintedSorted[(currentMintedIdx + 1) % mintedSorted.length] : undefined;
+
+  // Top bar with HOME button and pfp (always present)
+  const TopBar = (
+    <div style={{
+      backgroundColor: '#BFC8E0',
+      padding: '12px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontWeight: 'bold',
+      fontSize: '1.1rem',
+      color: 'white',
+      position: 'relative'
+    }}>
+      {/* HOME button */}
+      <button
+        onClick={() => { setShowProfile(false); setResult(null); }}
+        style={{
+          position: 'absolute',
+          left: 8,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          background: 'none',
+          border: 'none',
+          color: 'white',
+          fontSize: '0.85rem',
+          cursor: 'pointer',
+          fontWeight: 'bold',
+          padding: '2px 8px',
+          borderRadius: '8px',
+          letterSpacing: '0.05em',
+          boxShadow: 'none',
+          outline: 'none',
+          minWidth: 0
+        }}
+        aria-label="Home"
+      >
+        HOME
+      </button>
+      <span style={{ flex: 1, textAlign: 'center' }}>Daily Vibes</span>
+      {user && (
+        <img
+          src={user.pfpUrl}
+          alt={user.username}
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            objectFit: 'cover',
+            border: '2px solid #fff',
+            background: '#eee',
+            position: 'absolute',
+            right: 16,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            cursor: 'pointer'
+          }}
+          onClick={() => setShowProfile(true)}
+        />
+      )}
+    </div>
+  );
 
   // Profile/mints page
   if (showProfile) {
@@ -95,65 +165,7 @@ function App() {
         fontFamily: 'sans-serif',
         position: 'relative'
       }}>
-        {/* Header with HOME button and pfp */}
-        <div style={{
-          backgroundColor: '#BFC8E0',
-          padding: '12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: 'bold',
-          fontSize: '1.1rem',
-          color: 'white',
-          position: 'relative'
-        }}>
-          {/* HOME button */}
-          <button
-            onClick={() => setShowProfile(false)}
-            style={{
-              position: 'absolute',
-              left: 8,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              background: 'none',
-              border: 'none',
-              color: 'white',
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              padding: '2px 8px',
-              borderRadius: '8px',
-              letterSpacing: '0.05em',
-              boxShadow: 'none',
-              outline: 'none',
-              minWidth: 0
-            }}
-            aria-label="Home"
-          >
-            HOME
-          </button>
-          <span style={{ flex: 1, textAlign: 'center' }}>Daily Vibes</span>
-          {user && (
-            <img
-              src={user.pfpUrl}
-              alt={user.username}
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                objectFit: 'cover',
-                border: '2px solid #fff',
-                background: '#eee',
-                position: 'absolute',
-                right: 16,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                cursor: 'pointer'
-              }}
-              onClick={() => setShowProfile(false)}
-            />
-          )}
-        </div>
+        {TopBar}
         {/* Profile content */}
         <div style={{
           flex: 1,
@@ -190,11 +202,31 @@ function App() {
                 onClick={() => minted.includes(idx) && setLightbox({ open: true, idx })}
               >
                 {minted.includes(idx) ? (
-                  <img
-                    src={vibe.gif}
-                    alt={`Minted vibe ${idx}`}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
+                  <>
+                    <img
+                      src={vibe.gif}
+                      alt={`Minted vibe ${idx}`}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    {/* Edition count overlay */}
+                    {mintCounts[idx] > 0 && (
+                      <span style={{
+                        position: 'absolute',
+                        bottom: 6,
+                        right: 8,
+                        background: '#6C9BCF',
+                        color: '#fff',
+                        fontSize: '0.95rem',
+                        fontWeight: 'bold',
+                        borderRadius: '8px',
+                        padding: '2px 7px',
+                        opacity: 0.92,
+                        pointerEvents: 'none',
+                      }}>
+                        x{mintCounts[idx]}
+                      </span>
+                    )}
+                  </>
                 ) : (
                   <span style={{ fontSize: '2.5rem', color: '#A8B0CD', fontWeight: 'bold' }}>?</span>
                 )}
@@ -302,7 +334,7 @@ function App() {
           justifyContent: 'center',
         }}>
           {/* SVG stars/sparks animation */}
-          {[...Array(7)].map((_, i) => {
+          {[...Array(4)].map((_, i) => {
             const size = 24 + Math.random() * 24;
             const left = 10 + Math.random() * 80;
             const top = 10 + Math.random() * 80;
@@ -338,39 +370,7 @@ function App() {
         </div>
       )}
       {/* Header */}
-      <div style={{
-        backgroundColor: '#BFC8E0',
-        padding: '12px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontWeight: 'bold',
-        fontSize: '1.1rem',
-        color: 'white',
-        position: 'relative'
-      }}>
-        <span style={{ flex: 1, textAlign: 'center' }}>Daily Vibes</span>
-        {user && (
-          <img
-            src={user.pfpUrl}
-            alt={user.username}
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              objectFit: 'cover',
-              border: '2px solid #fff',
-              background: '#eee',
-              position: 'absolute',
-              right: 16,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              cursor: 'pointer'
-            }}
-            onClick={() => setShowProfile(true)}
-          />
-        )}
-      </div>
+      {TopBar}
 
       {/* Main */}
       <div style={{
