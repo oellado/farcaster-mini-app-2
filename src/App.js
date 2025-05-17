@@ -38,13 +38,14 @@ function App() {
   const [giftingIdx, setGiftingIdx] = useState(null);
   const [userSuggestions, setUserSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-
-  // Mocked most interacted users (replace with real data if available)
-  const mostInteracted = [
+  const [mostInteracted, setMostInteracted] = useState([
     { username: 'dwr', pfp_url: 'https://i.imgur.com/1QgrNNw.jpg' },
     { username: 'v', pfp_url: 'https://i.imgur.com/2nCt3Sbl.jpg' },
-    { username: 'jacob', pfp_url: 'https://i.imgur.com/3GvwNBf.jpg' }
-  ];
+    { username: 'jacob', pfp_url: 'https://i.imgur.com/3GvwNBf.jpg' },
+    { username: 'alice', pfp_url: 'https://i.imgur.com/4A7IjQk.jpg' },
+    { username: 'bob', pfp_url: 'https://i.imgur.com/5A7IjQk.jpg' },
+    { username: 'carol', pfp_url: 'https://i.imgur.com/6A7IjQk.jpg' }
+  ]);
 
   useEffect(() => {
     sdk.actions.ready();
@@ -55,6 +56,26 @@ function App() {
       }
     });
   }, []);
+
+  // Fetch real following list for most interacted users
+  useEffect(() => {
+    if (user && user.fid) {
+      fetch(`https://api.neynar.com/v2/farcaster/user/following?fid=${user.fid}&limit=6`, {
+        headers: {
+          'accept': 'application/json',
+          'x-api-key': '30558204-7AF3-44A6-9756-D14BBB60F5D2',
+          'x-neynar-experimental': 'false'
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.result && data.result.users && data.result.users.length > 0) {
+            setMostInteracted(data.result.users.map(u => ({ username: u.username, pfp_url: u.pfp_url })));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user]);
 
   const handleClick = () => {
     const random = vibes[Math.floor(Math.random() * vibes.length)];
@@ -149,11 +170,35 @@ function App() {
       .then(res => res.json())
       .then(data => {
         if (!ignore) {
-          setUserSuggestions((data.result && data.result.users) ? data.result.users : []);
-          setIsSearching(false);
+          let users = (data.result && data.result.users) ? data.result.users : [];
+          // If no users found, try exact match with by_username
+          if (users.length === 0 && giftUsername.trim().length > 0) {
+            fetch(`https://api.neynar.com/v2/farcaster/user/by_username?username=${encodeURIComponent(giftUsername.trim())}`, {
+              headers: {
+                'accept': 'application/json',
+                'x-api-key': '30558204-7AF3-44A6-9756-D14BBB60F5D2',
+                'x-neynar-experimental': 'false'
+              }
+            })
+              .then(res2 => res2.json())
+              .then(data2 => {
+                if (!ignore) {
+                  if (data2.user && data2.user.username) {
+                    setUserSuggestions([data2.user]);
+                  } else {
+                    setUserSuggestions([]);
+                  }
+                  setIsSearching(false);
+                }
+              })
+              .catch(() => { if (!ignore) setIsSearching(false); });
+          } else {
+            setUserSuggestions(users);
+            setIsSearching(false);
+          }
         }
       })
-      .catch(() => { if (!ignore) setIsSearching(false); });
+      .catch((err) => { if (!ignore) setIsSearching(false); });
     return () => { ignore = true; };
   }, [giftUsername, showGiftModal]);
 
@@ -391,12 +436,13 @@ function App() {
                     style={{
                       fontSize: '1.1rem',
                       backgroundColor: '#fff',
-                      color: '#6C9BCF',
+                      color: '#000',
                       padding: '8px 22px',
                       border: 'none',
                       borderRadius: '12px',
                       fontWeight: 'bold',
                       cursor: 'pointer',
+                      fontFamily: 'inherit',
                     }}
                   >
                     Share
@@ -412,6 +458,7 @@ function App() {
                       borderRadius: '12px',
                       fontWeight: 'bold',
                       cursor: 'pointer',
+                      fontFamily: 'inherit',
                     }}
                   >
                     Gift
@@ -438,7 +485,7 @@ function App() {
                     padding: '48px 0 32px 0',
                   }}
                 >
-                  <div style={{ marginBottom: 16, fontWeight: 'bold', color: '#6C9BCF', fontSize: '1.1rem' }}>Gift this NFT</div>
+                  <div style={{ marginBottom: 16, fontWeight: 'bold', color: '#fff', fontSize: '1.1rem' }}>Gift this NFT</div>
                   <input
                     type="text"
                     placeholder="Farcaster username"
@@ -448,10 +495,12 @@ function App() {
                       fontSize: '1.1rem',
                       padding: '8px 16px',
                       borderRadius: '8px',
-                      border: '1px solid #A8B0CD',
+                      border: '1px solid #fff',
                       marginBottom: 12,
                       outline: 'none',
                       width: 220,
+                      background: '#BFC8E0',
+                      color: '#fff',
                     }}
                   />
                   {/* Username suggestions dropdown */}
@@ -516,13 +565,14 @@ function App() {
                     onClick={handleGiftSend}
                     style={{
                       fontSize: '1.1rem',
-                      backgroundColor: '#6C9BCF',
-                      color: '#fff',
+                      backgroundColor: '#fff',
+                      color: '#000',
                       padding: '8px 22px',
                       border: 'none',
                       borderRadius: '12px',
                       fontWeight: 'bold',
                       cursor: 'pointer',
+                      fontFamily: 'inherit',
                     }}
                     disabled={!giftUsername.trim()}
                   >
