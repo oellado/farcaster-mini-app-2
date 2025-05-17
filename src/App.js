@@ -48,6 +48,81 @@ function App() {
     { username: 'carol', pfp_url: 'https://i.imgur.com/6A7IjQk.jpg' }
   ]);
 
+  // --- Improved user search logic ---
+  useEffect(() => {
+    if (!showGiftModal || !giftUsername.trim()) {
+      setUserSuggestions([]);
+      return;
+    }
+    let ignore = false;
+    setIsSearching(true);
+    const searchTerm = giftUsername.trim();
+    // Helper to set suggestions and stop searching
+    const finish = (users) => { setUserSuggestions(users); setIsSearching(false); };
+    // Run both search and by_username in parallel, merge results
+    Promise.all([
+      fetch(`https://api.neynar.com/v2/farcaster/user/search?q=${encodeURIComponent(searchTerm)}&limit=5`, {
+        headers: {
+          'accept': 'application/json',
+          'x-api-key': '30558204-7AF3-44A6-9756-D14BBB60F5D2',
+          'x-neynar-experimental': 'false'
+        }
+      }).then(res => res.json()).then(data => (data.result && data.result.users) ? data.result.users : []),
+      fetchUserByUsername(searchTerm)
+    ]).then(([searchUsers, byUsernameUser]) => {
+      if (!ignore) {
+        let users = searchUsers || [];
+        if (byUsernameUser) {
+          // Only add if not already in list
+          if (!users.some(u => u.username === byUsernameUser.username)) {
+            users = [byUsernameUser, ...users];
+          }
+        }
+        finish(users);
+      }
+    }).catch(() => { if (!ignore) finish([]); });
+    return () => { ignore = true; };
+  }, [giftUsername, showGiftModal]);
+
+  // --- Mock transaction state for gifting ---
+  const [showTxModal, setShowTxModal] = useState(false);
+  const [txHash, setTxHash] = useState("");
+  const [pendingShare, setPendingShare] = useState(false);
+
+  // Gift logic (mock with tx)
+  const handleGiftSend = () => {
+    if (selectedUsers.length === 0) return;
+    // Show fake tx modal
+    setShowGiftModal(false);
+    setShowTxModal(true);
+    setTxHash('0x' + Math.random().toString(16).slice(2, 10) + Math.random().toString(16).slice(2, 10));
+    setTimeout(() => {
+      // After 1.5s, show success (already shown)
+    }, 1500);
+    setGiftUsername("");
+    setGiftingIdx(null);
+    setSelectedUsers([]);
+    setLightbox({ open: false, idx: 0 });
+  };
+
+  // Share after gifting
+  const handleGiftShare = async () => {
+    if (!txHash) return;
+    setPendingShare(true);
+    try {
+      const usernames = selectedUsers.map(u => '@' + u.username).join(' ');
+      await sdk.actions.composeCast({
+        text: `${usernames} i just sent you a gif via Daily Vibe mini-app, check it here`,
+        embeds: [
+          'https://warpcast.com/miniapps/F3EoBj27HyTd/daily-vibes'
+        ]
+      });
+    } catch (e) {}
+    setPendingShare(false);
+    setShowTxModal(false);
+    setTxHash("");
+  };
+
   useEffect(() => {
     sdk.actions.ready();
     // Fetch Farcaster user context
@@ -143,17 +218,6 @@ function App() {
     }
   };
 
-  // Gift logic (mock)
-  const handleGiftSend = () => {
-    if (selectedUsers.length === 0) return;
-    alert(`NFT sent to: ${selectedUsers.map(u => u.username).join(", ")} (mock tx)`);
-    setShowGiftModal(false);
-    setGiftUsername("");
-    setGiftingIdx(null);
-    setSelectedUsers([]);
-    setLightbox({ open: false, idx: 0 });
-  };
-
   // Add user to selected list (if not already there)
   const addSelectedUser = (user) => {
     if (!selectedUsers.some(u => u.username === user.username)) {
@@ -185,65 +249,6 @@ function App() {
     } catch (e) {}
     return null;
   };
-
-  // Search Farcaster usernames as you type (Neynar public API)
-  useEffect(() => {
-    if (!showGiftModal || !giftUsername.trim()) {
-      setUserSuggestions([]);
-      return;
-    }
-    let ignore = false;
-    setIsSearching(true);
-    const searchTerm = giftUsername.trim();
-    // Helper to set suggestions and stop searching
-    const finish = (users) => { setUserSuggestions(users); setIsSearching(false); };
-    // Try /user/search first
-    fetch(`https://api.neynar.com/v2/farcaster/user/search?q=${encodeURIComponent(searchTerm)}&limit=5`, {
-      headers: {
-        'accept': 'application/json',
-        'x-api-key': '30558204-7AF3-44A6-9756-D14BBB60F5D2',
-        'x-neynar-experimental': 'false'
-      }
-    })
-      .then(res => res.json())
-      .then(async data => {
-        if (!ignore) {
-          let users = (data.result && data.result.users) ? data.result.users : [];
-          // If no users found, try exact match with by_username
-          if (users.length === 0 && searchTerm.length > 0) {
-            const exact = await fetchUserByUsername(searchTerm);
-            if (exact) {
-              finish([exact]);
-            } else {
-              // If input contains space or dot, try searching by display name
-              if (searchTerm.includes(' ') || searchTerm.includes('.')) {
-                fetch(`https://api.neynar.com/v2/farcaster/user/search?q=${encodeURIComponent(searchTerm)}&limit=5`, {
-                  headers: {
-                    'accept': 'application/json',
-                    'x-api-key': '30558204-7AF3-44A6-9756-D14BBB60F5D2',
-                    'x-neynar-experimental': 'false'
-                  }
-                })
-                  .then(res2 => res2.json())
-                  .then(data2 => {
-                    if (!ignore) {
-                      let users2 = (data2.result && data2.result.users) ? data2.result.users : [];
-                      finish(users2);
-                    }
-                  })
-                  .catch(() => { if (!ignore) finish([]); });
-              } else {
-                finish([]);
-              }
-            }
-          } else {
-            finish(users);
-          }
-        }
-      })
-      .catch(() => { if (!ignore) finish([]); });
-    return () => { ignore = true; };
-  }, [giftUsername, showGiftModal]);
 
   // Allow pressing Enter to select a user by exact username
   const handleGiftInputKeyDown = async (e) => {
@@ -636,10 +641,10 @@ function App() {
                   {selectedUsers.length > 0 && (
                     <div style={{ color: '#fff', fontSize: '1.05rem', textAlign: 'center', marginBottom: 8, fontWeight: 500 }}>
                       You are sending {selectedUsers.length} NFT{selectedUsers.length > 1 ? 's' : ''}.
-                      {/* Edition warning: only 1 edition and multiple users */}
-                      {selectedUsers.length > 1 && giftingIdx !== null && giftingIdx !== undefined && mintCounts[giftingIdx] === 1 && (
+                      {/* Edition warning: not enough editions for selected users */}
+                      {selectedUsers.length > 0 && giftingIdx !== null && giftingIdx !== undefined && mintCounts[giftingIdx] > 0 && selectedUsers.length > mintCounts[giftingIdx] && (
                         <div style={{ color: '#FFD700', fontSize: '0.98rem', marginTop: 2, fontWeight: 500 }}>
-                          You only have 1 edition of this NFT. Sending to multiple users may fail.
+                          You only have {mintCounts[giftingIdx]} edition{mintCounts[giftingIdx] > 1 ? 's' : ''} of this NFT. Sending to {selectedUsers.length} user{selectedUsers.length > 1 ? 's' : ''} may fail.
                         </div>
                       )}
                     </div>
@@ -880,6 +885,65 @@ function App() {
         </a>
         <div>© Miguelgarest, 2025.</div>
       </div>
+      {/* --- Mock transaction modal after gifting --- */}
+      {showTxModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(44, 62, 110, 0.98)',
+          zIndex: 3000,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)'
+        }}>
+          <div style={{ background: '#fff', borderRadius: 18, padding: '32px 28px', minWidth: 260, textAlign: 'center', boxShadow: '0 4px 32px #0002' }}>
+            <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#6C9BCF', marginBottom: 12 }}>Transaction Successful!</div>
+            <div style={{ fontSize: '1.05rem', color: '#333', marginBottom: 10 }}>Fake Tx Hash:</div>
+            <div style={{ fontFamily: 'monospace', color: '#888', fontSize: '1rem', marginBottom: 18 }}>{txHash}</div>
+            <button
+              onClick={handleGiftShare}
+              style={{
+                fontSize: '1.1rem',
+                backgroundColor: '#6C9BCF',
+                color: '#fff',
+                padding: '10px 24px',
+                border: 'none',
+                borderRadius: '12px',
+                fontWeight: 'bold',
+                cursor: pendingShare ? 'wait' : 'pointer',
+                marginBottom: 8,
+                minWidth: 120
+              }}
+              disabled={pendingShare}
+            >
+              {pendingShare ? 'Sharing...' : 'Share'}
+            </button>
+            <div style={{ color: '#6C9BCF', fontSize: '0.98rem', marginTop: 2 }}>cast to let them know</div>
+            <button
+              onClick={() => { setShowTxModal(false); setTxHash(""); }}
+              style={{
+                fontSize: '1rem',
+                backgroundColor: '#fff',
+                color: '#6C9BCF',
+                padding: '6px 18px',
+                border: '1px solid #6C9BCF',
+                borderRadius: '10px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                marginTop: 18
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
