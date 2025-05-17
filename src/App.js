@@ -205,7 +205,7 @@ function App() {
 
   // Close tx screen handler
   const handleTxScreenClose = () => {
-    setScreen('profile');
+    setScreen('home');
     setTxHash("");
     setTxSelectedUsers([]);
     setSelectedUsers([]);
