@@ -53,16 +53,26 @@ function App() {
   const [txHash, setTxHash] = useState("");
   const [pendingShare, setPendingShare] = useState(false);
   const [txSelectedUsers, setTxSelectedUsers] = useState([]); // store users for tx modal
+  const [txLoading, setTxLoading] = useState(false); // loading state for tx
 
   // Gift logic (mock with tx)
   const handleGiftSend = () => {
     if (selectedUsers.length === 0) return;
-    // Show fake tx modal
     setShowGiftModal(false);
-    setShowTxModal(true);
-    setTxHash('0x' + Math.random().toString(16).slice(2, 10) + Math.random().toString(16).slice(2, 10));
-    setTxSelectedUsers(selectedUsers); // store for modal/share
-    // Do NOT clear selectedUsers, giftUsername, or lightbox here
+    setTxLoading(true);
+    setTxSelectedUsers(selectedUsers);
+    // Decrement edition count for the gifted NFT
+    if (giftingIdx !== null && giftingIdx !== undefined) {
+      setMintCounts(prev => {
+        const next = [...prev];
+        next[giftingIdx] = Math.max(0, (next[giftingIdx] || 0) - selectedUsers.length);
+        return next;
+      });
+    }
+    setTimeout(() => {
+      setTxLoading(false);
+      setShowTxModal(true);
+    }, 1500);
   };
 
   // Share after gifting
@@ -236,7 +246,6 @@ function App() {
       setSelectedUsers([...selectedUsers, user]);
     }
     // Do NOT clear input or suggestions here
-    setUserSuggestions([]);
     setIsSearching(false);
   };
   // Remove user from selected list
@@ -956,6 +965,35 @@ function App() {
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+      {/* --- Loading spinner modal for tx --- */}
+      {txLoading && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(44, 62, 110, 0.98)',
+          zIndex: 3000,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)'
+        }}>
+          <div style={{ background: '#fff', borderRadius: 18, padding: '32px 28px', minWidth: 260, textAlign: 'center', boxShadow: '0 4px 32px #0002', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ marginBottom: 18 }}>
+              <svg width="48" height="48" viewBox="0 0 50 50">
+                <circle cx="25" cy="25" r="20" stroke="#6C9BCF" strokeWidth="5" fill="none" strokeDasharray="31.4 31.4" strokeLinecap="round">
+                  <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite" />
+                </circle>
+              </svg>
+            </div>
+            <div style={{ fontSize: '1.2rem', color: '#6C9BCF', fontWeight: 'bold' }}>Sending...</div>
           </div>
         </div>
       )}
