@@ -57,6 +57,9 @@ function App() {
 
   const [following, setFollowing] = useState([]); // user's following list
 
+  const [searchError, setSearchError] = useState("");
+  const [sendError, setSendError] = useState("");
+
   // Fetch user's following list on load
   useEffect(() => {
     if (user && user.fid) {
@@ -77,17 +80,23 @@ function App() {
     }
   }, [user]);
 
-  // --- Improved user search logic (revert to Neynar API) ---
+  // --- Improved user search logic (with debug logging and error handling) ---
   useEffect(() => {
     if (!showGiftModal || !giftUsername.trim()) {
       setUserSuggestions([]);
+      setSearchError("");
       return;
     }
     let ignore = false;
     setIsSearching(true);
+    setSearchError("");
     const searchTerm = giftUsername.trim();
     // Helper to set suggestions and stop searching
-    const finish = (users) => { setUserSuggestions(users); setIsSearching(false); };
+    const finish = (users) => {
+      setUserSuggestions(users);
+      setIsSearching(false);
+      if (users.length === 0) setSearchError("No users found.");
+    };
     // Run both search and by_username in parallel, merge results
     Promise.all([
       fetch(`https://api.neynar.com/v2/farcaster/user/search?q=${encodeURIComponent(searchTerm)}&limit=15`, {
@@ -96,7 +105,7 @@ function App() {
           'x-api-key': '30558204-7AF3-44A6-9756-D14BBB60F5D2',
           'x-neynar-experimental': 'false'
         }
-      }).then(res => res.json()).then(data => (data.result && data.result.users) ? data.result.users : []),
+      }).then(res => {console.log('Neynar search', res); return res.json();}).then(data => (data.result && data.result.users) ? data.result.users : []),
       fetchUserByUsername(searchTerm)
     ]).then(([searchUsers, byUsernameUser]) => {
       if (!ignore) {
@@ -107,9 +116,10 @@ function App() {
             users = [byUsernameUser, ...users];
           }
         }
+        console.log('User suggestions:', users);
         finish(users);
       }
-    }).catch(() => { if (!ignore) finish([]); });
+    }).catch((err) => { if (!ignore) { setSearchError("Search failed"); setIsSearching(false); console.error('Search error', err); } });
     return () => { ignore = true; };
   }, [giftUsername, showGiftModal]);
 
@@ -143,9 +153,14 @@ function App() {
     }
   };
 
-  // Gift logic (mock with tx)
+  // Gift logic (mock with tx, with debug logging and error handling)
   const handleGiftSend = () => {
-    if (selectedUsers.length === 0) return;
+    console.log('handleGiftSend', selectedUsers);
+    if (selectedUsers.length === 0) {
+      setSendError("Please select at least one user to gift.");
+      return;
+    }
+    setSendError("");
     setShowGiftModal(false);
     // Generate fake tx hash
     setTxHash('0x' + Math.random().toString(16).slice(2, 10) + Math.random().toString(16).slice(2, 10));
