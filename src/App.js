@@ -258,18 +258,6 @@ function App() {
     setSelectedUsers(selectedUsers.filter(u => u.username !== username));
   };
 
-  // Allow pressing Enter to select a user by exact username
-  const handleGiftInputKeyDown = async (e) => {
-    if (e.key === 'Enter' && giftUsername.trim()) {
-      const user = await fetchUserByUsername(giftUsername.trim());
-      if (user) {
-        addSelectedUser(user);
-      } else {
-        setUserSuggestions([]);
-      }
-    }
-  };
-
   // Top bar with HOME button and pfp (always present)
   const TopBar = (
     <div style={{
@@ -559,7 +547,6 @@ function App() {
                     placeholder="Farcaster username"
                     value={giftUsername}
                     onChange={e => setGiftUsername(e.target.value)}
-                    onKeyDown={handleGiftInputKeyDown}
                     style={{
                       fontSize: '1.1rem',
                       padding: '8px 16px',
