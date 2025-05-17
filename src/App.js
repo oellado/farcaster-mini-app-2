@@ -77,22 +77,71 @@ function App() {
     }
   }, [user]);
 
-  // --- Improved user search logic: use following only ---
+  // --- Improved user search logic (revert to Neynar API) ---
   useEffect(() => {
     if (!showGiftModal || !giftUsername.trim()) {
       setUserSuggestions([]);
       return;
     }
+    let ignore = false;
     setIsSearching(true);
-    const searchTerm = giftUsername.trim().toLowerCase();
-    // Filter following for username or display name match
-    const matches = following.filter(u =>
-      u.username.toLowerCase().includes(searchTerm) ||
-      (u.display_name && u.display_name.toLowerCase().includes(searchTerm))
-    ).slice(0, 15);
-    setUserSuggestions(matches);
-    setIsSearching(false);
-  }, [giftUsername, showGiftModal, following]);
+    const searchTerm = giftUsername.trim();
+    // Helper to set suggestions and stop searching
+    const finish = (users) => { setUserSuggestions(users); setIsSearching(false); };
+    // Run both search and by_username in parallel, merge results
+    Promise.all([
+      fetch(`https://api.neynar.com/v2/farcaster/user/search?q=${encodeURIComponent(searchTerm)}&limit=15`, {
+        headers: {
+          'accept': 'application/json',
+          'x-api-key': '30558204-7AF3-44A6-9756-D14BBB60F5D2',
+          'x-neynar-experimental': 'false'
+        }
+      }).then(res => res.json()).then(data => (data.result && data.result.users) ? data.result.users : []),
+      fetchUserByUsername(searchTerm)
+    ]).then(([searchUsers, byUsernameUser]) => {
+      if (!ignore) {
+        let users = searchUsers || [];
+        if (byUsernameUser) {
+          // Only add if not already in list
+          if (!users.some(u => u.username === byUsernameUser.username)) {
+            users = [byUsernameUser, ...users];
+          }
+        }
+        finish(users);
+      }
+    }).catch(() => { if (!ignore) finish([]); });
+    return () => { ignore = true; };
+  }, [giftUsername, showGiftModal]);
+
+  // Helper: fetch user by username (exact match)
+  const fetchUserByUsername = async (username) => {
+    try {
+      const res = await fetch(`https://api.neynar.com/v2/farcaster/user/by_username?username=${encodeURIComponent(username)}`, {
+        headers: {
+          'accept': 'application/json',
+          'x-api-key': '30558204-7AF3-44A6-9756-D14BBB60F5D2',
+          'x-neynar-experimental': 'false'
+        }
+      });
+      const data = await res.json();
+      if (data.user && data.user.username) {
+        return { username: data.user.username, pfp_url: data.user.pfp_url };
+      }
+    } catch (e) {}
+    return null;
+  };
+
+  // Allow pressing Enter to select a user by exact username
+  const handleGiftInputKeyDown = async (e) => {
+    if (e.key === 'Enter' && giftUsername.trim()) {
+      const user = await fetchUserByUsername(giftUsername.trim());
+      if (user) {
+        addSelectedUser(user);
+      } else {
+        setUserSuggestions([]);
+      }
+    }
+  };
 
   // Gift logic (mock with tx)
   const handleGiftSend = () => {
@@ -547,6 +596,7 @@ function App() {
                     placeholder="Farcaster username"
                     value={giftUsername}
                     onChange={e => setGiftUsername(e.target.value)}
+                    onKeyDown={handleGiftInputKeyDown}
                     style={{
                       fontSize: '1.1rem',
                       padding: '8px 16px',
