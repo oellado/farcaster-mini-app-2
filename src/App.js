@@ -133,7 +133,7 @@ function App() {
     let ignore = false;
     setIsSearching(true);
     fetch(`https://api.neynar.com/v2/farcaster/user/search?q=${encodeURIComponent(giftUsername.trim())}&limit=5`, {
-      headers: { 'accept': 'application/json', 'api_key': 'NEYNAR_PUBLIC' }
+      headers: { 'accept': 'application/json', 'api_key': '30558204-7AF3-44A6-9756-D14BBB60F5D2' }
     })
       .then(res => res.json())
       .then(data => {
@@ -372,10 +372,8 @@ function App() {
                   gap: 16,
                   padding: '18px 0',
                   borderRadius: '16px',
-                  background: 'rgba(255,255,255,0.45)',
                   backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
-                  boxShadow: '0 2px 16px #0001',
+                  WebkitBackdropFilter: 'blur(8px)'
                 }}>
                   <button
                     onClick={e => { e.stopPropagation(); handleLightboxShare(lightbox.idx); }}
@@ -388,7 +386,6 @@ function App() {
                       borderRadius: '12px',
                       fontWeight: 'bold',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 8px #0001',
                     }}
                   >
                     Share
@@ -404,7 +401,6 @@ function App() {
                       borderRadius: '12px',
                       fontWeight: 'bold',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 8px #0001',
                     }}
                   >
                     Gift
