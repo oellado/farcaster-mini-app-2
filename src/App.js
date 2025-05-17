@@ -26,21 +26,16 @@ const vibes = [
 
 function App() {
   const [result, setResult] = useState(null);
-  const [showSplash, setShowSplash] = useState(true);
   const [user, setUser] = useState(null);
 
   useEffect(() => {
     sdk.actions.ready();
-    const timeout = setTimeout(() => setShowSplash(false), 1500); // 1.5 seconds
-
     // Fetch Farcaster user context
     sdk.context.then(ctx => {
       if (ctx && ctx.user) {
         setUser(ctx.user);
       }
     });
-
-    return () => clearTimeout(timeout);
   }, []);
 
   const handleClick = () => {
@@ -64,21 +59,6 @@ const handleShare = async () => {
   }
 };
 
-  if (showSplash) {
-    return (
-      <div style={{
-        backgroundColor: '#DCE5FF',
-        height: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '3rem'
-      }}>
-        •ᴗ•
-      </div>
-    );
-  }
-
   return (
     <div style={{
       backgroundColor: '#DCE5FF',
@@ -93,30 +73,30 @@ const handleShare = async () => {
         padding: '12px',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         fontWeight: 'bold',
         fontSize: '1.1rem',
-        color: 'white'
+        color: 'white',
+        position: 'relative'
       }}>
-        <span>Hello!</span>
+        <span style={{ flex: 1, textAlign: 'center' }}>Daily Vibes</span>
         {user && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1rem', fontWeight: 'normal' }}>
-              {user.displayName || user.username}
-            </span>
-            <img
-              src={user.pfpUrl}
-              alt={user.username}
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                objectFit: 'cover',
-                border: '2px solid #fff',
-                background: '#eee'
-              }}
-            />
-          </div>
+          <img
+            src={user.pfpUrl}
+            alt={user.username}
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              objectFit: 'cover',
+              border: '2px solid #fff',
+              background: '#eee',
+              position: 'absolute',
+              right: 16,
+              top: '50%',
+              transform: 'translateY(-50%)'
+            }}
+          />
         )}
       </div>
 
@@ -162,13 +142,13 @@ const handleShare = async () => {
               src={result.gif}
               alt="vibe gif"
               style={{
-                width: '300px',
-                height: '300px',
+                width: '200px',
+                height: '200px',
                 objectFit: 'contain',
                 backgroundColor: '#EAEAE8',
                 borderRadius: '24px',
                 padding: '10px',
-                marginBottom: '30px'
+                marginBottom: '20px'
               }}
             />
             <button
@@ -181,10 +161,28 @@ const handleShare = async () => {
                 border: 'none',
                 borderRadius: '12px',
                 fontWeight: 'bold',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                marginBottom: '12px'
               }}
             >
               Share
+            </button>
+            <br />
+            <button
+              onClick={() => setResult(null)}
+              style={{
+                fontSize: '1.2rem',
+                backgroundColor: '#A8B0CD',
+                color: '#fff',
+                padding: '10px 20px',
+                border: 'none',
+                borderRadius: '12px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                marginTop: '0px'
+              }}
+            >
+              Reset
             </button>
           </>
         )}
