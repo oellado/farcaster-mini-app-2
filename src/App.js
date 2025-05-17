@@ -27,6 +27,10 @@ const vibes = [
 function App() {
   const [result, setResult] = useState(null);
   const [user, setUser] = useState(null);
+  const [showProfile, setShowProfile] = useState(false);
+  // Track minted NFTs by index (mocked)
+  const [minted, setMinted] = useState([]);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
     sdk.actions.ready();
@@ -43,26 +47,148 @@ function App() {
     setResult(random);
   };
 
-const handleShare = async () => {
-  if (!result) return;
-  
-  try {
-    await sdk.actions.composeCast({
-      text: result.text, // Just include the text result
-      embeds: [
-        result.gif, // The GIF URL will be rendered as a media embed
-        'https://warpcast.com/miniapps/F3EoBj27HyTd/daily-vibes' // Mini app embed
-      ]
-    });
-  } catch (error) {
-    console.error('Error sharing to Warpcast:', error);
-  }
-};
+  const handleShare = async () => {
+    if (!result) return;
+    try {
+      await sdk.actions.composeCast({
+        text: result.text, // Just include the text result
+        embeds: [
+          result.gif, // The GIF URL will be rendered as a media embed
+          'https://warpcast.com/miniapps/F3EoBj27HyTd/daily-vibes' // Mini app embed
+        ]
+      });
+    } catch (error) {
+      console.error('Error sharing to Warpcast:', error);
+    }
+  };
 
   // Add a mock mint handler
   const handleMint = () => {
-    alert('Minting (mock)...');
+    if (!result) return;
+    // Find the index of the current gif in vibes
+    const idx = vibes.findIndex(v => v.gif === result.gif);
+    if (idx !== -1 && !minted.includes(idx)) {
+      setMinted([...minted, idx]);
+    }
+    setShowConfetti(true);
+    setTimeout(() => {
+      setShowConfetti(false);
+      setShowProfile(true);
+    }, 1200);
   };
+
+  // Profile/mints page
+  if (showProfile) {
+    return (
+      <div style={{
+        backgroundColor: '#DCE5FF',
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        fontFamily: 'sans-serif'
+      }}>
+        {/* Header with back button and pfp */}
+        <div style={{
+          backgroundColor: '#BFC8E0',
+          padding: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: 'bold',
+          fontSize: '1.1rem',
+          color: 'white',
+          position: 'relative'
+        }}>
+          {/* Back button */}
+          <button
+            onClick={() => setShowProfile(false)}
+            style={{
+              position: 'absolute',
+              left: 8,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              color: 'white',
+              fontSize: '1.5rem',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              padding: 0
+            }}
+            aria-label="Back"
+          >
+            ←
+          </button>
+          <span style={{ flex: 1, textAlign: 'center' }}>Daily Vibes</span>
+          {user && (
+            <img
+              src={user.pfpUrl}
+              alt={user.username}
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                objectFit: 'cover',
+                border: '2px solid #fff',
+                background: '#eee',
+                position: 'absolute',
+                right: 16,
+                top: '50%',
+                transform: 'translateY(-50%)'
+              }}
+            />
+          )}
+        </div>
+        {/* Profile content */}
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          textAlign: 'center',
+          padding: '32px 20px 0 20px'
+        }}>
+          <h2 style={{ marginBottom: '24px', fontWeight: 'bold' }}>Your Mints</h2>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 80px)',
+            gridGap: '18px',
+            justifyContent: 'center',
+            marginBottom: '24px'
+          }}>
+            {vibes.map((vibe, idx) => (
+              <div key={idx} style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '18px',
+                background: '#EAEAE8',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                border: minted.includes(idx) ? '2px solid #6C9BCF' : '2px solid #ccc',
+                position: 'relative'
+              }}>
+                {minted.includes(idx) ? (
+                  <img
+                    src={vibe.gif}
+                    alt={`Minted vibe ${idx}`}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <span style={{ fontSize: '2.5rem', color: '#A8B0CD', fontWeight: 'bold' }}>?</span>
+                )}
+              </div>
+            ))}
+          </div>
+          <div style={{ color: '#888', fontSize: '1rem' }}>
+            {minted.length === 0 ? 'You have not minted any vibes yet.' : `You have minted ${minted.length} vibe${minted.length > 1 ? 's' : ''}!`}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -70,8 +196,50 @@ const handleShare = async () => {
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
-      fontFamily: 'sans-serif'
+      fontFamily: 'sans-serif',
+      position: 'relative'
     }}>
+      {/* Confetti/Sparkle animation overlay */}
+      {showConfetti && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          pointerEvents: 'none',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          {/* Simple sparkles/confetti using CSS */}
+          {[...Array(18)].map((_, i) => (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                left: `${10 + Math.random() * 80}%`,
+                top: `${10 + Math.random() * 80}%`,
+                width: 12,
+                height: 12,
+                borderRadius: '50%',
+                background: `hsl(${Math.random() * 360}, 80%, 70%)`,
+                opacity: 0.8,
+                animation: 'pop 1s ease',
+                animationDelay: `${Math.random() * 0.5}s`,
+              }}
+            />
+          ))}
+          <style>{`
+            @keyframes pop {
+              0% { transform: scale(0.2); opacity: 0.7; }
+              60% { transform: scale(1.2); opacity: 1; }
+              100% { transform: scale(0.7); opacity: 0; }
+            }
+          `}</style>
+        </div>
+      )}
       {/* Header */}
       <div style={{
         backgroundColor: '#BFC8E0',
@@ -99,8 +267,10 @@ const handleShare = async () => {
               position: 'absolute',
               right: 16,
               top: '50%',
-              transform: 'translateY(-50%)'
+              transform: 'translateY(-50%)',
+              cursor: 'pointer'
             }}
+            onClick={() => setShowProfile(true)}
           />
         )}
       </div>
