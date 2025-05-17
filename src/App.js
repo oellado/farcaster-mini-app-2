@@ -82,7 +82,7 @@ function App() {
     setShowConfetti(true);
     setTimeout(() => {
       setShowConfetti(false);
-      setShowProfile(false); // Go to home after celebration
+      setShowProfile(true); // Go to mosaic after celebration
       setResult(null);
     }, 1200);
   };
