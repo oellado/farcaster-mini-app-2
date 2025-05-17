@@ -36,6 +36,8 @@ function App() {
   const [showGiftModal, setShowGiftModal] = useState(false);
   const [giftUsername, setGiftUsername] = useState("");
   const [giftingIdx, setGiftingIdx] = useState(null);
+  const [userSuggestions, setUserSuggestions] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     sdk.actions.ready();
@@ -121,6 +123,28 @@ function App() {
     setGiftingIdx(null);
     setLightbox({ open: false, idx: 0 });
   };
+
+  // Search Farcaster usernames as you type (Neynar public API)
+  useEffect(() => {
+    if (!showGiftModal || !giftUsername.trim()) {
+      setUserSuggestions([]);
+      return;
+    }
+    let ignore = false;
+    setIsSearching(true);
+    fetch(`https://api.neynar.com/v2/farcaster/user/search?q=${encodeURIComponent(giftUsername.trim())}&limit=5`, {
+      headers: { 'accept': 'application/json', 'api_key': 'NEYNAR_PUBLIC' }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (!ignore) {
+          setUserSuggestions((data.result && data.result.users) ? data.result.users : []);
+          setIsSearching(false);
+        }
+      })
+      .catch(() => { if (!ignore) setIsSearching(false); });
+    return () => { ignore = true; };
+  }, [giftUsername, showGiftModal]);
 
   // Top bar with HOME button and pfp (always present)
   const TopBar = (
@@ -302,12 +326,14 @@ function App() {
                 left: 0,
                 width: '100vw',
                 height: '100vh',
-                background: 'rgba(0,0,0,0.0)',
+                background: 'rgba(0,0,0,0.08)',
                 zIndex: 2000,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexDirection: 'column',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
               }}
             >
               {/* Main GIF in lightbox */}
@@ -338,9 +364,19 @@ function App() {
                   </button>
                 )}
               </div>
-              {/* Action buttons below GIF */}
+              {/* Action buttons below GIF with blurry background */}
               {!showGiftModal && (
-                <div style={{ marginTop: 24, display: 'flex', gap: 16 }}>
+                <div style={{
+                  marginTop: 24,
+                  display: 'flex',
+                  gap: 16,
+                  padding: '18px 0',
+                  borderRadius: '16px',
+                  background: 'rgba(255,255,255,0.45)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  boxShadow: '0 2px 16px #0001',
+                }}>
                   <button
                     onClick={e => { e.stopPropagation(); handleLightboxShare(lightbox.idx); }}
                     style={{
@@ -411,6 +447,43 @@ function App() {
                       width: 180,
                     }}
                   />
+                  {/* Username suggestions dropdown */}
+                  {isSearching && <div style={{ color: '#A8B0CD', fontSize: '0.95rem', marginBottom: 6 }}>Searching...</div>}
+                  {userSuggestions.length > 0 && (
+                    <div style={{
+                      background: '#fff',
+                      border: '1px solid #A8B0CD',
+                      borderRadius: '8px',
+                      marginBottom: 8,
+                      width: 180,
+                      maxHeight: 120,
+                      overflowY: 'auto',
+                      boxShadow: '0 2px 8px #0001',
+                      zIndex: 2200,
+                      position: 'relative',
+                    }}>
+                      {userSuggestions.map(u => (
+                        <div
+                          key={u.fid}
+                          onClick={() => { setGiftUsername(u.username); setUserSuggestions([]); }}
+                          style={{
+                            padding: '7px 12px',
+                            cursor: 'pointer',
+                            color: '#333',
+                            fontSize: '1rem',
+                            borderBottom: '1px solid #F0F0F0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            background: '#fff',
+                          }}
+                        >
+                          {u.pfp_url && <img src={u.pfp_url} alt={u.username} style={{ width: 22, height: 22, borderRadius: '50%' }} />}
+                          <span>@{u.username}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <button
                     onClick={handleGiftSend}
                     style={{
