@@ -60,6 +60,8 @@ function App() {
   const [searchError, setSearchError] = useState("");
   const [sendError, setSendError] = useState("");
 
+  const [txScreen, setTxScreen] = useState(false); // show transaction screen
+
   // Fetch user's following list on load
   useEffect(() => {
     if (user && user.fid) {
@@ -153,7 +155,7 @@ function App() {
     }
   };
 
-  // Gift logic (mock with tx, with debug logging and error handling)
+  // Gift logic (mock with tx, now using txScreen)
   const handleGiftSend = () => {
     console.log('handleGiftSend', selectedUsers);
     if (selectedUsers.length === 0) {
@@ -164,20 +166,23 @@ function App() {
     setShowGiftModal(false);
     // Generate fake tx hash
     setTxHash('0x' + Math.random().toString(16).slice(2, 10) + Math.random().toString(16).slice(2, 10));
-    setTxLoading(true);
     setTxSelectedUsers(selectedUsers);
-    // Decrement edition count for the gifted NFT
+    // Decrement edition count for the gifted NFT and update minted array if needed
     if (giftingIdx !== null && giftingIdx !== undefined) {
       setMintCounts(prev => {
         const next = [...prev];
         next[giftingIdx] = Math.max(0, (next[giftingIdx] || 0) - selectedUsers.length);
+        // If edition count is now 0, remove from minted
+        if (next[giftingIdx] === 0) {
+          setMinted(minted => minted.filter(idx => idx !== giftingIdx));
+        }
         return next;
       });
     }
+    // Show transaction screen after a short delay (simulate loading)
     setTimeout(() => {
-      setTxLoading(false);
-      setShowTxModal(true);
-    }, 1500);
+      setTxScreen(true);
+    }, 900);
   };
 
   // Share after gifting
@@ -194,24 +199,26 @@ function App() {
       });
     } catch (e) {}
     setPendingShare(false);
-    setShowTxModal(false);
+    setTxScreen(false);
     setTxHash("");
     setTxSelectedUsers([]);
     setSelectedUsers([]);
     setGiftUsername("");
     setGiftingIdx(null);
     setLightbox({ open: false, idx: 0 });
+    setShowProfile(true); // Go to mosaic/profile after sharing
   };
 
-  // Close tx modal handler
-  const handleTxModalClose = () => {
-    setShowTxModal(false);
+  // Close tx screen handler
+  const handleTxScreenClose = () => {
+    setTxScreen(false);
     setTxHash("");
     setTxSelectedUsers([]);
     setSelectedUsers([]);
     setGiftUsername("");
     setGiftingIdx(null);
     setLightbox({ open: false, idx: 0 });
+    setShowProfile(true); // Go to mosaic/profile after Home
   };
 
   useEffect(() => {
@@ -740,6 +747,64 @@ function App() {
     );
   }
 
+  if (txScreen) {
+    return (
+      <div style={{
+        backgroundColor: '#DCE5FF',
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        fontFamily: 'sans-serif',
+        position: 'relative',
+        zIndex: 4000
+      }}>
+        {TopBar}
+        <div style={{ background: '#fff', borderRadius: 18, padding: '40px 32px', minWidth: 280, textAlign: 'center', boxShadow: '0 4px 32px #0002', marginTop: 60 }}>
+          <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#6C9BCF', marginBottom: 12 }}>Transaction Successful!</div>
+          <div style={{ fontSize: '1.05rem', color: '#333', marginBottom: 10 }}>Fake Tx Hash:</div>
+          <div style={{ fontFamily: 'monospace', color: '#888', fontSize: '1rem', marginBottom: 18 }}>{txHash}</div>
+          <button
+            onClick={handleGiftShare}
+            style={{
+              fontSize: '1.1rem',
+              backgroundColor: '#6C9BCF',
+              color: '#fff',
+              padding: '10px 24px',
+              border: 'none',
+              borderRadius: '12px',
+              fontWeight: 'bold',
+              cursor: pendingShare ? 'wait' : 'pointer',
+              marginBottom: 8,
+              minWidth: 120
+            }}
+            disabled={pendingShare}
+          >
+            {pendingShare ? 'Sharing...' : 'Share'}
+          </button>
+          <div style={{ color: '#6C9BCF', fontSize: '0.98rem', marginTop: 2 }}>cast to let them know</div>
+          <button
+            onClick={handleTxScreenClose}
+            style={{
+              fontSize: '1rem',
+              backgroundColor: '#fff',
+              color: '#6C9BCF',
+              padding: '6px 18px',
+              border: '1px solid #6C9BCF',
+              borderRadius: '10px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              marginTop: 18
+            }}
+          >
+            Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       backgroundColor: '#DCE5FF',
@@ -948,94 +1013,6 @@ function App() {
         </a>
         <div>© Miguelgarest, 2025.</div>
       </div>
-      {/* --- Mock transaction modal after gifting --- */}
-      {showTxModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          background: 'rgba(44, 62, 110, 0.98)',
-          zIndex: 3000,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)'
-        }}>
-          <div style={{ background: '#fff', borderRadius: 18, padding: '32px 28px', minWidth: 260, textAlign: 'center', boxShadow: '0 4px 32px #0002' }}>
-            <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#6C9BCF', marginBottom: 12 }}>Transaction Successful!</div>
-            <div style={{ fontSize: '1.05rem', color: '#333', marginBottom: 10 }}>Fake Tx Hash:</div>
-            <div style={{ fontFamily: 'monospace', color: '#888', fontSize: '1rem', marginBottom: 18 }}>{txHash}</div>
-            <button
-              onClick={handleGiftShare}
-              style={{
-                fontSize: '1.1rem',
-                backgroundColor: '#6C9BCF',
-                color: '#fff',
-                padding: '10px 24px',
-                border: 'none',
-                borderRadius: '12px',
-                fontWeight: 'bold',
-                cursor: pendingShare ? 'wait' : 'pointer',
-                marginBottom: 8,
-                minWidth: 120
-              }}
-              disabled={pendingShare}
-            >
-              {pendingShare ? 'Sharing...' : 'Share'}
-            </button>
-            <div style={{ color: '#6C9BCF', fontSize: '0.98rem', marginTop: 2 }}>cast to let them know</div>
-            <button
-              onClick={handleTxModalClose}
-              style={{
-                fontSize: '1rem',
-                backgroundColor: '#fff',
-                color: '#6C9BCF',
-                padding: '6px 18px',
-                border: '1px solid #6C9BCF',
-                borderRadius: '10px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                marginTop: 18
-              }}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-      {/* --- Loading spinner modal for tx --- */}
-      {txLoading && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          background: 'rgba(44, 62, 110, 0.98)',
-          zIndex: 3000,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)'
-        }}>
-          <div style={{ background: '#fff', borderRadius: 18, padding: '32px 28px', minWidth: 260, textAlign: 'center', boxShadow: '0 4px 32px #0002', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ marginBottom: 18 }}>
-              <svg width="48" height="48" viewBox="0 0 50 50">
-                <circle cx="25" cy="25" r="20" stroke="#6C9BCF" strokeWidth="5" fill="none" strokeDasharray="31.4 31.4" strokeLinecap="round">
-                  <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite" />
-                </circle>
-              </svg>
-            </div>
-            <div style={{ fontSize: '1.2rem', color: '#6C9BCF', fontWeight: 'bold' }}>Sending...</div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
