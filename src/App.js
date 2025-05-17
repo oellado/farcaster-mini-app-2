@@ -59,6 +59,11 @@ const handleShare = async () => {
   }
 };
 
+  // Add a mock mint handler
+  const handleMint = () => {
+    alert('Minting (mock)...');
+  };
+
   return (
     <div style={{
       backgroundColor: '#DCE5FF',
@@ -151,39 +156,59 @@ const handleShare = async () => {
                 marginBottom: '20px'
               }}
             />
-            <button
-              onClick={handleShare}
-              style={{
-                fontSize: '1.2rem',
-                backgroundColor: '#fff',
-                color: '#000',
-                padding: '10px 20px',
-                border: 'none',
-                borderRadius: '12px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                marginBottom: '12px'
-              }}
-            >
-              Share
-            </button>
-            <br />
-            <button
-              onClick={() => setResult(null)}
-              style={{
-                fontSize: '1.2rem',
-                backgroundColor: '#A8B0CD',
-                color: '#fff',
-                padding: '10px 20px',
-                border: 'none',
-                borderRadius: '12px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                marginTop: '0px'
-              }}
-            >
-              Reset
-            </button>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '12px' }}>
+              <button
+                onClick={handleShare}
+                style={{
+                  fontSize: '1.2rem',
+                  backgroundColor: '#fff',
+                  color: '#000',
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  minWidth: '100px'
+                }}
+              >
+                Share
+              </button>
+              <button
+                onClick={handleMint}
+                style={{
+                  fontSize: '1.2rem',
+                  backgroundColor: '#6C9BCF',
+                  color: '#fff',
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  minWidth: '100px'
+                }}
+              >
+                Mint
+              </button>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button
+                onClick={() => setResult(null)}
+                style={{
+                  fontSize: '1.2rem',
+                  backgroundColor: '#A8B0CD',
+                  color: '#fff',
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  marginTop: '0px',
+                  minWidth: '100px'
+                }}
+              >
+                Reset
+              </button>
+            </div>
           </>
         )}
       </div>
