@@ -39,6 +39,13 @@ function App() {
   const [userSuggestions, setUserSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
+  // Mocked most interacted users (replace with real data if available)
+  const mostInteracted = [
+    { username: 'dwr', pfp_url: 'https://i.imgur.com/1QgrNNw.jpg' },
+    { username: 'v', pfp_url: 'https://i.imgur.com/2nCt3Sbl.jpg' },
+    { username: 'jacob', pfp_url: 'https://i.imgur.com/3GvwNBf.jpg' }
+  ];
+
   useEffect(() => {
     sdk.actions.ready();
     // Fetch Farcaster user context
@@ -133,7 +140,11 @@ function App() {
     let ignore = false;
     setIsSearching(true);
     fetch(`https://api.neynar.com/v2/farcaster/user/search?q=${encodeURIComponent(giftUsername.trim())}&limit=5`, {
-      headers: { 'accept': 'application/json', 'api_key': '30558204-7AF3-44A6-9756-D14BBB60F5D2' }
+      headers: {
+        'accept': 'application/json',
+        'x-api-key': '30558204-7AF3-44A6-9756-D14BBB60F5D2',
+        'x-neynar-experimental': 'false'
+      }
     })
       .then(res => res.json())
       .then(data => {
@@ -416,15 +427,15 @@ function App() {
                     left: 0,
                     bottom: 0,
                     width: '100vw',
-                    minHeight: 120,
+                    minHeight: 260,
                     background: 'rgba(255,255,255,0.98)',
                     boxShadow: '0 -2px 24px #0002',
                     zIndex: 2100,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '24px 0 32px 0',
+                    justifyContent: 'flex-start',
+                    padding: '48px 0 32px 0',
                   }}
                 >
                   <div style={{ marginBottom: 16, fontWeight: 'bold', color: '#6C9BCF', fontSize: '1.1rem' }}>Gift this NFT</div>
@@ -440,7 +451,7 @@ function App() {
                       border: '1px solid #A8B0CD',
                       marginBottom: 12,
                       outline: 'none',
-                      width: 180,
+                      width: 220,
                     }}
                   />
                   {/* Username suggestions dropdown */}
@@ -451,8 +462,8 @@ function App() {
                       border: '1px solid #A8B0CD',
                       borderRadius: '8px',
                       marginBottom: 8,
-                      width: 180,
-                      maxHeight: 120,
+                      width: 220,
+                      maxHeight: 140,
                       overflowY: 'auto',
                       boxShadow: '0 2px 8px #0001',
                       zIndex: 2200,
@@ -480,6 +491,27 @@ function App() {
                       ))}
                     </div>
                   )}
+                  {!isSearching && giftUsername.trim() && userSuggestions.length === 0 && (
+                    <div style={{ color: '#A8B0CD', fontSize: '0.95rem', marginBottom: 8 }}>No users found.</div>
+                  )}
+                  {/* Most Interacted Users */}
+                  <div style={{ marginTop: 10, marginBottom: 16, width: 220 }}>
+                    <div style={{ color: '#A8B0CD', fontSize: '0.95rem', marginBottom: 4 }}>Most Interacted</div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      {mostInteracted.map(u => (
+                        <div
+                          key={u.username}
+                          onClick={() => { setGiftUsername(u.username); setUserSuggestions([]); }}
+                          style={{
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer',
+                          }}
+                        >
+                          <img src={u.pfp_url} alt={u.username} style={{ width: 32, height: 32, borderRadius: '50%', marginBottom: 2, border: '2px solid #A8B0CD' }} />
+                          <span style={{ fontSize: '0.95rem', color: '#6C9BCF' }}>@{u.username}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                   <button
                     onClick={handleGiftSend}
                     style={{
@@ -491,7 +523,6 @@ function App() {
                       borderRadius: '12px',
                       fontWeight: 'bold',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 8px #0001',
                     }}
                     disabled={!giftUsername.trim()}
                   >
