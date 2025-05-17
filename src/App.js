@@ -31,6 +31,9 @@ function App() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [lightbox, setLightbox] = useState({ open: false, idx: 0 });
   const [giftingIdx, setGiftingIdx] = useState(null); // NFT index for gifting
+  const [giftUsername, setGiftUsername] = useState("");
+  const [minted, setMinted] = useState([]); // array of indices
+  const [mintCounts, setMintCounts] = useState(Array(vibes.length).fill(0)); // edition count per NFT
   const [selectedUsers, setSelectedUsers] = useState([]); // {username, pfp_url}
   const [userSuggestions, setUserSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
