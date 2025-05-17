@@ -33,6 +33,9 @@ function App() {
   const [mintCounts, setMintCounts] = useState(Array(vibes.length).fill(0)); // edition count per NFT
   const [showConfetti, setShowConfetti] = useState(false);
   const [lightbox, setLightbox] = useState({ open: false, idx: 0 });
+  const [showGiftModal, setShowGiftModal] = useState(false);
+  const [giftUsername, setGiftUsername] = useState("");
+  const [giftingIdx, setGiftingIdx] = useState(null);
 
   useEffect(() => {
     sdk.actions.ready();
@@ -92,6 +95,32 @@ function App() {
   const currentMintedIdx = mintedSorted.indexOf(lightbox.idx);
   const prevMinted = mintedSorted.length > 0 ? mintedSorted[(currentMintedIdx - 1 + mintedSorted.length) % mintedSorted.length] : undefined;
   const nextMinted = mintedSorted.length > 0 ? mintedSorted[(currentMintedIdx + 1) % mintedSorted.length] : undefined;
+
+  // Share from lightbox
+  const handleLightboxShare = async (idx) => {
+    const vibe = vibes[idx];
+    try {
+      await sdk.actions.composeCast({
+        text: vibe.text,
+        embeds: [
+          vibe.gif,
+          'https://warpcast.com/miniapps/F3EoBj27HyTd/daily-vibes'
+        ]
+      });
+    } catch (error) {
+      console.error('Error sharing to Warpcast:', error);
+    }
+  };
+
+  // Gift logic (mock)
+  const handleGiftSend = () => {
+    if (!giftUsername.trim()) return;
+    alert(`NFT sent to ${giftUsername.trim()} (mock tx)`);
+    setShowGiftModal(false);
+    setGiftUsername("");
+    setGiftingIdx(null);
+    setLightbox({ open: false, idx: 0 });
+  };
 
   // Top bar with HOME button and pfp (always present)
   const TopBar = (
@@ -260,7 +289,12 @@ function App() {
           {lightbox.open && (
             <div
               onClick={e => {
-                if (e.target === e.currentTarget) setLightbox({ open: false, idx: 0 });
+                if (e.target === e.currentTarget) {
+                  setLightbox({ open: false, idx: 0 });
+                  setShowGiftModal(false);
+                  setGiftUsername("");
+                  setGiftingIdx(null);
+                }
               }}
               style={{
                 position: 'fixed',
@@ -304,6 +338,98 @@ function App() {
                   </button>
                 )}
               </div>
+              {/* Action buttons below GIF */}
+              {!showGiftModal && (
+                <div style={{ marginTop: 24, display: 'flex', gap: 16 }}>
+                  <button
+                    onClick={e => { e.stopPropagation(); handleLightboxShare(lightbox.idx); }}
+                    style={{
+                      fontSize: '1.1rem',
+                      backgroundColor: '#fff',
+                      color: '#6C9BCF',
+                      padding: '8px 22px',
+                      border: 'none',
+                      borderRadius: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px #0001',
+                    }}
+                  >
+                    Share
+                  </button>
+                  <button
+                    onClick={e => { e.stopPropagation(); setShowGiftModal(true); setGiftingIdx(lightbox.idx); }}
+                    style={{
+                      fontSize: '1.1rem',
+                      backgroundColor: '#6C9BCF',
+                      color: '#fff',
+                      padding: '8px 22px',
+                      border: 'none',
+                      borderRadius: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px #0001',
+                    }}
+                  >
+                    Gift
+                  </button>
+                </div>
+              )}
+              {/* Gift modal (bottom sheet) */}
+              {showGiftModal && (
+                <div
+                  onClick={e => { if (e.target === e.currentTarget) setShowGiftModal(false); }}
+                  style={{
+                    position: 'fixed',
+                    left: 0,
+                    bottom: 0,
+                    width: '100vw',
+                    minHeight: 120,
+                    background: 'rgba(255,255,255,0.98)',
+                    boxShadow: '0 -2px 24px #0002',
+                    zIndex: 2100,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '24px 0 32px 0',
+                  }}
+                >
+                  <div style={{ marginBottom: 16, fontWeight: 'bold', color: '#6C9BCF', fontSize: '1.1rem' }}>Gift this NFT</div>
+                  <input
+                    type="text"
+                    placeholder="Farcaster username"
+                    value={giftUsername}
+                    onChange={e => setGiftUsername(e.target.value)}
+                    style={{
+                      fontSize: '1.1rem',
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      border: '1px solid #A8B0CD',
+                      marginBottom: 12,
+                      outline: 'none',
+                      width: 180,
+                    }}
+                  />
+                  <button
+                    onClick={handleGiftSend}
+                    style={{
+                      fontSize: '1.1rem',
+                      backgroundColor: '#6C9BCF',
+                      color: '#fff',
+                      padding: '8px 22px',
+                      border: 'none',
+                      borderRadius: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px #0001',
+                    }}
+                    disabled={!giftUsername.trim()}
+                  >
+                    Send
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
