@@ -27,15 +27,10 @@ const vibes = [
 function App() {
   const [result, setResult] = useState(null);
   const [user, setUser] = useState(null);
-  const [showProfile, setShowProfile] = useState(false);
-  // Track minted NFTs by index and edition count
-  const [minted, setMinted] = useState([]); // array of indices
-  const [mintCounts, setMintCounts] = useState(Array(vibes.length).fill(0)); // edition count per NFT
+  const [screen, setScreen] = useState('home'); // 'home', 'profile', 'gifting', 'tx'
   const [showConfetti, setShowConfetti] = useState(false);
   const [lightbox, setLightbox] = useState({ open: false, idx: 0 });
-  const [showGiftModal, setShowGiftModal] = useState(false);
-  const [giftUsername, setGiftUsername] = useState("");
-  const [giftingIdx, setGiftingIdx] = useState(null);
+  const [giftingIdx, setGiftingIdx] = useState(null); // NFT index for gifting
   const [selectedUsers, setSelectedUsers] = useState([]); // {username, pfp_url}
   const [userSuggestions, setUserSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -60,8 +55,6 @@ function App() {
   const [searchError, setSearchError] = useState("");
   const [sendError, setSendError] = useState("");
 
-  const [txScreen, setTxScreen] = useState(false); // show transaction screen
-
   // Fetch user's following list on load
   useEffect(() => {
     if (user && user.fid) {
@@ -84,7 +77,7 @@ function App() {
 
   // --- Improved user search logic (with debug logging and error handling) ---
   useEffect(() => {
-    if (!showGiftModal || !giftUsername.trim()) {
+    if (!screen === 'gifting' || !giftUsername.trim()) {
       setUserSuggestions([]);
       setSearchError("");
       return;
@@ -123,7 +116,7 @@ function App() {
       }
     }).catch((err) => { if (!ignore) { setSearchError("Search failed"); setIsSearching(false); console.error('Search error', err); } });
     return () => { ignore = true; };
-  }, [giftUsername, showGiftModal]);
+  }, [giftUsername, screen]);
 
   // Helper: fetch user by username (exact match)
   const fetchUserByUsername = async (username) => {
@@ -163,7 +156,7 @@ function App() {
       return;
     }
     setSendError("");
-    setShowGiftModal(false);
+    setScreen('tx');
     // Generate fake tx hash
     setTxHash('0x' + Math.random().toString(16).slice(2, 10) + Math.random().toString(16).slice(2, 10));
     setTxSelectedUsers(selectedUsers);
@@ -181,7 +174,7 @@ function App() {
     }
     // Show transaction screen after a short delay (simulate loading)
     setTimeout(() => {
-      setTxScreen(true);
+      setScreen('tx');
     }, 900);
   };
 
@@ -199,26 +192,24 @@ function App() {
       });
     } catch (e) {}
     setPendingShare(false);
-    setTxScreen(false);
+    setScreen('profile');
     setTxHash("");
     setTxSelectedUsers([]);
     setSelectedUsers([]);
     setGiftUsername("");
     setGiftingIdx(null);
     setLightbox({ open: false, idx: 0 });
-    setShowProfile(true); // Go to mosaic/profile after sharing
   };
 
   // Close tx screen handler
   const handleTxScreenClose = () => {
-    setTxScreen(false);
+    setScreen('profile');
     setTxHash("");
     setTxSelectedUsers([]);
     setSelectedUsers([]);
     setGiftUsername("");
     setGiftingIdx(null);
     setLightbox({ open: false, idx: 0 });
-    setShowProfile(true); // Go to mosaic/profile after Home
   };
 
   useEffect(() => {
@@ -289,7 +280,7 @@ function App() {
     setShowConfetti(true);
     setTimeout(() => {
       setShowConfetti(false);
-      setShowProfile(true); // Go to mosaic after celebration
+      setScreen('profile'); // Go to mosaic after celebration
       setResult(null);
     }, 1200);
   };
@@ -344,7 +335,7 @@ function App() {
     }}>
       {/* HOME button */}
       <button
-        onClick={() => { setShowProfile(false); setResult(null); }}
+        onClick={() => { setScreen('home'); setResult(null); setLightbox({ open: false, idx: 0 }); setGiftingIdx(null); }}
         style={{
           position: 'absolute',
           left: 8,
@@ -385,14 +376,14 @@ function App() {
             transform: 'translateY(-50%)',
             cursor: 'pointer'
           }}
-          onClick={() => setShowProfile(true)}
+          onClick={() => setScreen('profile')}
         />
       )}
     </div>
   );
 
   // Profile/mints page
-  if (showProfile) {
+  if (screen === 'profile') {
     return (
       <div style={{
         backgroundColor: '#DCE5FF',
@@ -474,7 +465,7 @@ function App() {
             {minted.length === 0 ? 'You have not minted any vibes yet.' : `You have minted ${minted.length} vibe${minted.length > 1 ? 's' : ''}!`}
           </div>
           <button
-            onClick={() => setShowProfile(false)}
+            onClick={() => setScreen('home')}
             style={{
               fontSize: '1.1rem',
               backgroundColor: '#6C9BCF',
@@ -484,22 +475,22 @@ function App() {
               borderRadius: '12px',
               fontWeight: 'bold',
               cursor: 'pointer',
-              marginBottom: '16px',
+              marginBottom: '8px',
               marginTop: 0,
               minWidth: '120px',
             }}
           >
             Mint More
           </button>
-
+          <div style={{ color: '#6C9BCF', fontSize: '1rem', marginBottom: 24, marginTop: 2, fontWeight: 500 }}>
+            Try gifting an NFT by selecting one above.
+          </div>
           {/* Lightbox overlay */}
           {lightbox.open && (
             <div
               onClick={e => {
                 if (e.target === e.currentTarget) {
                   setLightbox({ open: false, idx: 0 });
-                  setShowGiftModal(false);
-                  setGiftUsername("");
                   setGiftingIdx(null);
                 }
               }}
@@ -548,198 +539,48 @@ function App() {
                 )}
               </div>
               {/* Action buttons below GIF with blurry background */}
-              {!showGiftModal && (
-                <div style={{
-                  marginTop: 24,
-                  display: 'flex',
-                  gap: 16,
-                  padding: '18px 0',
-                  borderRadius: '16px',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)'
-                }}>
-                  <button
-                    onClick={e => { e.stopPropagation(); handleLightboxShare(lightbox.idx); }}
-                    style={{
-                      fontSize: '1.1rem',
-                      backgroundColor: '#fff',
-                      color: '#000',
-                      padding: '8px 22px',
-                      border: 'none',
-                      borderRadius: '12px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    Share
-                  </button>
-                  <button
-                    onClick={e => { e.stopPropagation(); setShowGiftModal(true); setGiftingIdx(lightbox.idx); }}
-                    style={{
-                      fontSize: '1.1rem',
-                      backgroundColor: '#6C9BCF',
-                      color: '#fff',
-                      padding: '8px 22px',
-                      border: 'none',
-                      borderRadius: '12px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    Gift
-                  </button>
-                </div>
-              )}
-              {/* Gift modal (bottom sheet) */}
-              {showGiftModal && (
-                <div
-                  onClick={e => { if (e.target === e.currentTarget) setShowGiftModal(false); }}
+              <div style={{
+                marginTop: 24,
+                display: 'flex',
+                gap: 16,
+                padding: '18px 0',
+                borderRadius: '16px',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)'
+              }}>
+                <button
+                  onClick={e => { e.stopPropagation(); handleLightboxShare(lightbox.idx); }}
                   style={{
-                    position: 'fixed',
-                    left: 0,
-                    bottom: 0,
-                    width: '100vw',
-                    minHeight: 260,
-                    background: 'rgba(44, 62, 110, 0.98)',
-                    boxShadow: '0 -2px 24px #0002',
-                    zIndex: 2100,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'flex-start',
-                    padding: '48px 0 32px 0',
+                    fontSize: '1.1rem',
+                    backgroundColor: '#fff',
+                    color: '#000',
+                    padding: '8px 22px',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
                   }}
                 >
-                  <div style={{ marginBottom: 16, fontWeight: 'bold', color: '#fff', fontSize: '1.1rem' }}>Gift this NFT</div>
-                  <input
-                    type="text"
-                    placeholder="Farcaster username"
-                    value={giftUsername}
-                    onChange={e => setGiftUsername(e.target.value)}
-                    onKeyDown={handleGiftInputKeyDown}
-                    style={{
-                      fontSize: '1.1rem',
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      border: '1px solid #fff',
-                      marginBottom: 12,
-                      outline: 'none',
-                      width: 220,
-                      background: '#BFC8E0',
-                      color: '#fff',
-                    }}
-                  />
-                  {giftUsername && (
-                    <button onClick={() => setGiftUsername("")} style={{ position: 'absolute', right: 30, top: 56, background: 'none', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer' }}>×</button>
-                  )}
-                  {/* Username suggestions dropdown */}
-                  {isSearching && <div style={{ color: '#A8B0CD', fontSize: '0.95rem', marginBottom: 6 }}>Searching...</div>}
-                  {userSuggestions.length > 0 && (
-                    <div style={{
-                      background: '#fff',
-                      border: '1px solid #A8B0CD',
-                      borderRadius: '8px',
-                      marginBottom: 8,
-                      width: 220,
-                      maxHeight: 140,
-                      overflowY: 'auto',
-                      boxShadow: '0 2px 8px #0001',
-                      zIndex: 2200,
-                      position: 'relative',
-                    }}>
-                      {userSuggestions.map(u => (
-                        <div
-                          key={u.fid}
-                          onClick={() => addSelectedUser({ username: u.username, pfp_url: u.pfp_url })}
-                          style={{
-                            padding: '7px 12px',
-                            cursor: 'pointer',
-                            color: '#333',
-                            fontSize: '1rem',
-                            borderBottom: '1px solid #F0F0F0',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            background: '#fff',
-                          }}
-                        >
-                          {u.pfp_url && <img src={u.pfp_url} alt={u.username} style={{ width: 22, height: 22, borderRadius: '50%' }} />}
-                          <span>@{u.username}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {!isSearching && giftUsername.trim() && userSuggestions.length === 0 && giftUsername !== '' && (
-                    <div style={{ color: '#A8B0CD', fontSize: '0.95rem', marginBottom: 8 }}>No users found.</div>
-                  )}
-                  {/* Most Interacted Users */}
-                  <div style={{ marginTop: 10, marginBottom: 16, width: 220 }}>
-                    <div style={{ color: '#fff', fontSize: '0.95rem', marginBottom: 4, textAlign: 'center', fontWeight: 'bold', letterSpacing: '0.01em' }}>Most Interacted</div>
-                    <div style={{ display: 'flex', gap: 18, flexWrap: 'nowrap', justifyContent: 'center', maxWidth: 220 }}>
-                      {mostInteracted.slice(0, 3).map(u => (
-                        <div
-                          key={u.username}
-                          onClick={() => addSelectedUser({ username: u.username, pfp_url: u.pfp_url })}
-                          style={{
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', maxWidth: 40, marginBottom: 4
-                          }}
-                        >
-                          <img src={u.pfp_url} alt={u.username} style={{ width: 32, height: 32, borderRadius: '50%', marginBottom: 2, border: '2px solid #A8B0CD', objectFit: 'cover' }} />
-                          <span style={{ fontSize: '0.85rem', color: '#6C9BCF', wordBreak: 'break-all', textAlign: 'center' }}>@{u.username}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  {/* Selected users pfps */}
-                  {selectedUsers.length > 0 && (
-                    <div style={{ display: 'flex', gap: 12, margin: '10px 0 18px 0', justifyContent: 'center', width: 220 }}>
-                      {selectedUsers.map(u => (
-                        <div key={u.username} style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <img src={u.pfp_url} alt={u.username} style={{ width: 36, height: 36, borderRadius: '50%', border: '2px solid #6C9BCF', objectFit: 'cover', background: '#fff' }} />
-                          <span style={{ fontSize: '0.8rem', color: '#6C9BCF', textAlign: 'center', marginTop: 2 }}>@{u.username}</span>
-                          {/* Checkmark */}
-                          <span style={{ position: 'absolute', top: -6, right: -6, background: '#fff', borderRadius: '50%', border: '2px solid #6C9BCF', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6C9BCF', fontWeight: 'bold', fontSize: 13 }}>✓</span>
-                          {/* Remove button */}
-                          <button onClick={() => removeSelectedUser(u.username)} style={{ position: 'absolute', bottom: -8, right: -8, background: '#fff', border: '1px solid #A8B0CD', borderRadius: '50%', width: 16, height: 16, color: '#A8B0CD', fontSize: 11, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {/* Info about how many NFTs will be sent and edition warning */}
-                  {selectedUsers.length > 0 && (
-                    <div style={{ color: '#fff', fontSize: '1.05rem', textAlign: 'center', marginBottom: 8, fontWeight: 500 }}>
-                      You are sending {selectedUsers.length} NFT{selectedUsers.length > 1 ? 's' : ''}.
-                      {/* Edition warning: not enough editions for selected users */}
-                      {selectedUsers.length > 0 && giftingIdx !== null && giftingIdx !== undefined && mintCounts[giftingIdx] > 0 && selectedUsers.length > mintCounts[giftingIdx] && (
-                        <div style={{ color: '#FFD700', fontSize: '0.98rem', marginTop: 2, fontWeight: 500 }}>
-                          You only have {mintCounts[giftingIdx]} edition{mintCounts[giftingIdx] > 1 ? 's' : ''} of this NFT. Sending to {selectedUsers.length} user{selectedUsers.length > 1 ? 's' : ''} may fail.
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <button
-                    onClick={handleGiftSend}
-                    style={{
-                      fontSize: '1.1rem',
-                      backgroundColor: '#fff',
-                      color: '#000',
-                      padding: '8px 22px',
-                      border: '2px solid #A8B0CD',
-                      borderRadius: '12px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      fontFamily: 'inherit',
-                      boxShadow: '0 2px 8px #0001',
-                      marginTop: 8
-                    }}
-                    disabled={selectedUsers.length === 0}
-                  >
-                    Send
-                  </button>
-                </div>
-              )}
+                  Share
+                </button>
+                <button
+                  onClick={e => { e.stopPropagation(); setLightbox({ open: false, idx: 0 }); setGiftingIdx(lightbox.idx); setScreen('gifting'); }}
+                  style={{
+                    fontSize: '1.1rem',
+                    backgroundColor: '#6C9BCF',
+                    color: '#fff',
+                    padding: '8px 22px',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  Gift
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -747,7 +588,166 @@ function App() {
     );
   }
 
-  if (txScreen) {
+  // Gifting full-screen page
+  if (screen === 'gifting') {
+    return (
+      <div style={{
+        backgroundColor: '#DCE5FF',
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        fontFamily: 'sans-serif',
+        position: 'relative'
+      }}>
+        {TopBar}
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          textAlign: 'center',
+          padding: '32px 20px 0 20px',
+          position: 'relative'
+        }}>
+          <div style={{ marginBottom: 16, fontWeight: 'bold', color: '#6C9BCF', fontSize: '1.2rem' }}>Gift this NFT</div>
+          <img
+            src={vibes[giftingIdx]?.gif}
+            alt={`Gifted vibe ${giftingIdx}`}
+            style={{ width: 120, height: 120, objectFit: 'contain', borderRadius: 16, marginBottom: 18, background: '#EAEAE8' }}
+          />
+          <input
+            type="text"
+            placeholder="Farcaster username"
+            value={giftUsername}
+            onChange={e => setGiftUsername(e.target.value)}
+            onKeyDown={handleGiftInputKeyDown}
+            style={{
+              fontSize: '1.1rem',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: '1px solid #6C9BCF',
+              marginBottom: 12,
+              outline: 'none',
+              width: 220,
+              background: '#fff',
+              color: '#333',
+            }}
+          />
+          {giftUsername && (
+            <button onClick={() => setGiftUsername("")} style={{ position: 'absolute', right: 30, top: 56, background: 'none', border: 'none', color: '#6C9BCF', fontSize: 18, cursor: 'pointer' }}>×</button>
+          )}
+          {/* Username suggestions dropdown */}
+          {isSearching && <div style={{ color: '#A8B0CD', fontSize: '0.95rem', marginBottom: 6 }}>Searching...</div>}
+          {userSuggestions.length > 0 && (
+            <div style={{
+              background: '#fff',
+              border: '1px solid #A8B0CD',
+              borderRadius: '8px',
+              marginBottom: 8,
+              width: 220,
+              maxHeight: 140,
+              overflowY: 'auto',
+              boxShadow: '0 2px 8px #0001',
+              zIndex: 2200,
+              position: 'relative',
+            }}>
+              {userSuggestions.map(u => (
+                <div
+                  key={u.fid || u.username}
+                  onClick={() => addSelectedUser({ username: u.username, pfp_url: u.pfp_url })}
+                  style={{
+                    padding: '7px 12px',
+                    cursor: 'pointer',
+                    color: '#333',
+                    fontSize: '1rem',
+                    borderBottom: '1px solid #F0F0F0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    background: '#fff',
+                  }}
+                >
+                  {u.pfp_url && <img src={u.pfp_url} alt={u.username} style={{ width: 22, height: 22, borderRadius: '50%' }} />}
+                  <span>@{u.username}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {!isSearching && giftUsername.trim() && userSuggestions.length === 0 && giftUsername !== '' && (
+            <div style={{ color: '#A8B0CD', fontSize: '0.95rem', marginBottom: 8 }}>No users found.</div>
+          )}
+          {/* Most Interacted Users */}
+          <div style={{ marginTop: 10, marginBottom: 16, width: 220 }}>
+            <div style={{ color: '#6C9BCF', fontSize: '0.95rem', marginBottom: 4, textAlign: 'center', fontWeight: 'bold', letterSpacing: '0.01em' }}>Most Interacted</div>
+            <div style={{ display: 'flex', gap: 18, flexWrap: 'nowrap', justifyContent: 'center', maxWidth: 220 }}>
+              {mostInteracted.slice(0, 3).map(u => (
+                <div
+                  key={u.username}
+                  onClick={() => addSelectedUser({ username: u.username, pfp_url: u.pfp_url })}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', maxWidth: 40, marginBottom: 4
+                  }}
+                >
+                  <img src={u.pfp_url} alt={u.username} style={{ width: 32, height: 32, borderRadius: '50%', marginBottom: 2, border: '2px solid #A8B0CD', objectFit: 'cover' }} />
+                  <span style={{ fontSize: '0.85rem', color: '#6C9BCF', wordBreak: 'break-all', textAlign: 'center' }}>@{u.username}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Selected users pfps */}
+          {selectedUsers.length > 0 && (
+            <div style={{ display: 'flex', gap: 12, margin: '10px 0 18px 0', justifyContent: 'center', width: 220 }}>
+              {selectedUsers.map(u => (
+                <div key={u.username} style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <img src={u.pfp_url} alt={u.username} style={{ width: 36, height: 36, borderRadius: '50%', border: '2px solid #6C9BCF', objectFit: 'cover', background: '#fff' }} />
+                  <span style={{ fontSize: '0.8rem', color: '#6C9BCF', textAlign: 'center', marginTop: 2 }}>@{u.username}</span>
+                  {/* Checkmark */}
+                  <span style={{ position: 'absolute', top: -6, right: -6, background: '#fff', borderRadius: '50%', border: '2px solid #6C9BCF', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6C9BCF', fontWeight: 'bold', fontSize: 13 }}>✓</span>
+                  {/* Remove button */}
+                  <button onClick={() => removeSelectedUser(u.username)} style={{ position: 'absolute', bottom: -8, right: -8, background: '#fff', border: '1px solid #A8B0CD', borderRadius: '50%', width: 16, height: 16, color: '#A8B0CD', fontSize: 11, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Info about how many NFTs will be sent and edition warning */}
+          {selectedUsers.length > 0 && (
+            <div style={{ color: '#6C9BCF', fontSize: '1.05rem', textAlign: 'center', marginBottom: 8, fontWeight: 500 }}>
+              You are sending {selectedUsers.length} NFT{selectedUsers.length > 1 ? 's' : ''}.
+              {/* Edition warning: not enough editions for selected users */}
+              {selectedUsers.length > 0 && giftingIdx !== null && giftingIdx !== undefined && mintCounts[giftingIdx] > 0 && selectedUsers.length > mintCounts[giftingIdx] && (
+                <div style={{ color: '#FFD700', fontSize: '0.98rem', marginTop: 2, fontWeight: 500 }}>
+                  You only have {mintCounts[giftingIdx]} edition{mintCounts[giftingIdx] > 1 ? 's' : ''} of this NFT. Sending to {selectedUsers.length} user{selectedUsers.length > 1 ? 's' : ''} may fail.
+                </div>
+              )}
+            </div>
+          )}
+          <button
+            onClick={handleGiftSend}
+            style={{
+              fontSize: '1.1rem',
+              backgroundColor: '#6C9BCF',
+              color: '#fff',
+              padding: '8px 22px',
+              border: 'none',
+              borderRadius: '12px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              boxShadow: '0 2px 8px #0001',
+              marginTop: 8
+            }}
+            disabled={selectedUsers.length === 0}
+          >
+            Send
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Transaction screen
+  if (screen === 'tx') {
     return (
       <div style={{
         backgroundColor: '#DCE5FF',
